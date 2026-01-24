@@ -64,6 +64,67 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/* Botão ORDENS (Novo) */}
+      <Tabs.Screen
+        name="orders"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
+              <Ionicons name={focused ? "list" : "list-outline"} size={28} color={color} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* Botão CLIENTES */}
+      <Tabs.Screen
+        name="clients"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
+              <Ionicons name={focused ? "people" : "people-outline"} size={28} color={color} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* Botão DADOS (Analytics) */}
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
+              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* Botão PERFIL */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
+              <Ionicons name={focused ? "person" : "person-outline"} size={28} color={color} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* Botão FORNECEDORES */}
+      <Tabs.Screen
+        name="suppliers"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
+              <Ionicons name={focused ? "business" : "business-outline"} size={28} color={color} />
+            </View>
+          ),
+        }}
+      />
+
     </Tabs>
   );
 }

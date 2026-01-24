@@ -1,96 +1,164 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { colors } from "../../src/constants/colors";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 50,
   },
+  
+  // HEADER
   header: {
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: colors.text.main,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.text.body,
-    marginTop: 4,
-  },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.text.light,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    marginLeft: 10,
-  },
-  optionButton: {
+    paddingBottom: 16,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    // Sombra leve
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: "space-between",
   },
-  optionIcon: {
+  backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 18,
+    color: colors.text.main,
+    textAlign: "center",
+    flex: 1,
+    marginRight: 40, // Compensa o botão de voltar para centralizar
+  },
+
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  // PROFILE SECTION
+  profileSection: {
+    alignItems: "center",
+    marginBottom: 32,
+    marginTop: 8,
+  },
+  avatarContainer: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.cardDark,
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  userName: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 20,
+    color: colors.text.main,
+    marginBottom: 4,
+  },
+  userRole: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 14,
+    color: colors.text.muted,
+  },
+
+  // SETTINGS GROUPS
+  sectionTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 12,
+    color: colors.text.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginLeft: 12,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  groupContainer: {
+    backgroundColor: colors.cardDark, // Fundo preto do card
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  
+  // ITEM DA LISTA
+  itemButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: colors.cardDark,
+  },
+  itemSeparator: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginLeft: 60, // Alinhado com o texto
+  },
+  
+  iconBox: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
   },
-  optionTextContainer: {
+  itemContent: {
     flex: 1,
   },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text.main,
+  itemTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: "#FFF", // Texto branco no fundo escuro
   },
-  optionSubtitle: {
+  itemValue: {
+    fontFamily: "Poppins_400Regular",
     fontSize: 12,
-    color: colors.text.light,
+    color: colors.text.muted,
+    marginRight: 8,
   },
+
+  // LOGOUT BUTTON
   logoutButton: {
-    marginTop: 40,
-    marginHorizontal: 20,
+    marginTop: 32,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
     borderRadius: 12,
+    backgroundColor: "rgba(239, 68, 68, 0.1)", // Vermelho transparente
     borderWidth: 1,
-    borderColor: colors.danger,
-    backgroundColor: "rgba(220, 38, 38, 0.05)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    gap: 8,
   },
   logoutText: {
-    color: colors.danger,
-    fontWeight: "bold",
+    fontFamily: "Poppins_700Bold",
     fontSize: 16,
-    marginLeft: 8,
+    color: colors.danger,
   },
   versionText: {
     textAlign: "center",
-    marginTop: 20,
-    color: colors.text.light,
+    marginTop: 16,
+    fontFamily: "Poppins_500Medium",
     fontSize: 12,
+    color: colors.text.muted,
   },
 });
