@@ -1,27 +1,15 @@
-// mobile/src/utils/masks.ts
+// src/utils/masks.ts
 
-export const masks = {
-  // (11) 99999-9999
-  phone: (value: string) => {
-    return value
-      .replace(/\D/g, "") // Remove tudo que não é dígito
-      .replace(/^(\d{2})(\d)/, "($1) $2") // Coloca parênteses no DDD
-      .replace(/(\d{5})(\d)/, "$1-$2") // Coloca hífen depois do 5º dígito
-      .slice(0, 15); // Limita tamanho
-  },
+export const maskPhone = (value: string) => {
+  // Remove tudo que não é dígito
+  const cleanValue = value.replace(/\D/g, "");
 
-  // 111.222.333-44
-  cpf: (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
-      .slice(0, 14);
-  },
+  // Aplica a máscara (99) 99999-9999
+  return cleanValue
+    .replace(/^(\d{2})(\d)/g, "($1) $2")
+    .replace(/(\d)(\d{4})$/, "$1-$2");
+};
 
-  // Remove formatação para salvar no banco
-  unmask: (value: string) => {
-    return value.replace(/\D/g, "");
-  }
+export const unmask = (value: string) => {
+  return value.replace(/\D/g, "");
 };

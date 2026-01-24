@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   StatusBar, 
   ScrollView, 
-  Image 
+  Image,
+  Platform 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -79,14 +80,17 @@ export default function ProductsScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
-        {/* 1. SCANNER BUTTON */}
+      {/* 1. SCANNER BUTTON */}
         <View style={styles.scanSection}>
-          <TouchableOpacity style={styles.scanButton} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={styles.scanButton} 
+            activeOpacity={0.8}
+            onPress={() => router.push("/scanner")} // <--- LINK PARA A TELA DE SCANNER
+          >
             <Ionicons name="qr-code-outline" size={24} color={colors.text.onPrimary} />
             <Text style={styles.scanButtonText}>Escanear QR Code</Text>
           </TouchableOpacity>
         </View>
-
         {/* 2. SEARCH BAR */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
@@ -169,11 +173,23 @@ export default function ProductsScreen() {
                 </View>
 
                 <View style={styles.actionsRow}>
-                  <TouchableOpacity style={[styles.actionButton, styles.sellButton]}>
+                  {/* Botão Vender */}
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.sellButton]}
+                    onPress={() => router.push("/sales/create")}
+                  >
                     <Text style={styles.sellText}>Vender</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionButton, styles.editButton]}>
-                    <Text style={styles.editText}>Editar</Text>
+                  
+                  {/* Botão Divulgar (Substituindo o Editar por enquanto) */}
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.editButton]}
+                    onPress={() => router.push("/marketing")}
+                  >
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                        <Ionicons name="share-social-outline" size={16} color={colors.text.main} />
+                        <Text style={styles.editText}>Divulgar</Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </View>
