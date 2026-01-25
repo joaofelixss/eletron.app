@@ -5,16 +5,14 @@ import {
   TextInput, 
   TouchableOpacity, 
   StatusBar, 
-  KeyboardAvoidingView, 
-  Platform,
-  ScrollView,
+  ScrollView, 
+  Image,
   Alert
 } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { colors } from "../../../src/constants/colors";
-import { styles } from "./add.styles";
-import { masks } from "../../../src/utils/masks"; // Importando nosso utilitário
+import { formStyles as styles } from "./client-form.styles"; // Importando estilos
 
 export default function AddClientScreen() {
   const router = useRouter();
@@ -22,115 +20,104 @@ export default function AddClientScreen() {
   // Estados do Formulário
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
 
-  // Função de Salvar
-  function handleSave() {
-    // Validação Básica
-    if (!name.trim()) {
-      return Alert.alert("Ops!", "Por favor, digite o nome do cliente.");
+  const handleSave = () => {
+    if (!name || !phone) {
+      Alert.alert("Atenção", "Nome e Telefone são obrigatórios.");
+      return;
     }
-    if (phone.length < 14) { // (11) 9...
-      return Alert.alert("Ops!", "O WhatsApp é obrigatório e precisa ser válido.");
-    }
-
-    setLoading(true);
     
-    // Simulação de Salvamento no Banco
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert("Sucesso!", `Cliente ${name} cadastrado com sucesso.`, [
-        { text: "OK", onPress: () => router.back() }
-      ]);
-    }, 1000);
-  }
+    // AQUI ENTRARIA A LÓGICA DE SALVAR NO BANCO DE DADOS
+    
+    Alert.alert("Sucesso", "Cliente cadastrado com sucesso!", [
+      { text: "OK", onPress: () => router.back() }
+    ]);
+  };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={styles.container}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.main} />
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Novo Cliente</Text>
+        <Text style={styles.title}>Novo Cliente</Text>
+        <View style={{ width: 40 }} /> 
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         
-        {/* Campo NOME */}
-        <Text style={styles.label}>Nome Completo</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="person-outline" size={20} color={colors.text.light} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Ex: João da Silva"
-            placeholderTextColor={colors.text.light}
+        {/* FOTO UPLOAD */}
+        <TouchableOpacity style={styles.photoContainer}>
+          <View style={styles.photoCircle}>
+             <Ionicons name="person" size={40} color="#9CA3AF" />
+          </View>
+          <View style={styles.editPhotoBadge}>
+            <Ionicons name="camera" size={16} color="#000" />
+          </View>
+          <Text style={{ marginTop: 8, fontSize: 12, color: "#6B7280" }}>Adicionar Foto</Text>
+        </TouchableOpacity>
+
+        {/* CAMPOS */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Nome Completo *</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ex: Maria Silva" 
             value={name}
             onChangeText={setName}
-            autoCapitalize="words"
           />
         </View>
 
-        {/* Campo WHATSAPP (Obrigatório) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={styles.label}>WhatsApp <Text style={{ color: colors.danger }}>*</Text></Text>
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="logo-whatsapp" size={20} color={colors.success} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="(DD) 90000-0000"
-            placeholderTextColor={colors.text.light}
-            keyboardType="number-pad"
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>WhatsApp / Telefone *</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ex: (11) 99999-9999" 
+            keyboardType="phone-pad"
             value={phone}
-            onChangeText={(text) => setPhone(masks.phone(text))} // Aplicando Máscara
-            maxLength={15}
+            onChangeText={setPhone}
           />
         </View>
 
-        {/* Campo CPF (Opcional) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={styles.label}>CPF <Text style={styles.optionalText}>(Opcional)</Text></Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>E-mail (Opcional)</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ex: maria@email.com" 
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
         </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="card-outline" size={20} color={colors.text.light} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="000.000.000-00"
-            placeholderTextColor={colors.text.light}
-            keyboardType="number-pad"
-            value={cpf}
-            onChangeText={(text) => setCpf(masks.cpf(text))} // Aplicando Máscara
-            maxLength={14}
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Observações</Text>
+          <TextInput 
+            style={[styles.input, styles.textArea]} 
+            placeholder="Ex: Cliente prefere contato após as 18h..." 
+            multiline
+            numberOfLines={4}
+            value={notes}
+            onChangeText={setNotes}
           />
         </View>
 
       </ScrollView>
 
-      {/* Footer com Botão */}
+      {/* FOOTER */}
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.saveButton, { opacity: loading ? 0.7 : 1 }]} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-             <Text style={styles.saveButtonText}>Salvando...</Text>
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={24} color={colors.text.onPrimary} />
-              <Text style={styles.saveButtonText}>Cadastrar Cliente</Text>
-            </>
-          )}
+        <TouchableOpacity style={styles.submitButton} onPress={handleSave}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+          <Text style={styles.submitButtonText}>Salvar Cliente</Text>
         </TouchableOpacity>
       </View>
 
-    </KeyboardAvoidingView>
+    </View>
   );
 }

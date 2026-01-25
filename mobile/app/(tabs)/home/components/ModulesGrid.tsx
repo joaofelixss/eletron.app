@@ -51,7 +51,7 @@ export const ModulesGrid = () => {
           label="Estoque" 
           stat="3 Baixos" 
           isAlert // Fundo vermelho claro
-          onPress={() => router.push("/(tabs)/products")}
+          onPress={() => router.push("/(tabs)/products/inventory")}
           color="#10B981" 
         />
         <ModuleItem 

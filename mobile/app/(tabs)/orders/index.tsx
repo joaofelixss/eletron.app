@@ -10,36 +10,36 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors } from "../../src/constants/colors";
+import { colors } from "../../../src/constants/colors";
 import { styles } from "./orders.styles";
 
-// Dados Mockados (Baseados no HTML)
+// Dados Mockados
 const MOCK_ORDERS = [
   {
     id: "9281",
     client: "Carlos Silva",
     device: "iPhone 13 - Troca de Tela",
-    date: "24/10/2023 • 14:30",
+    date: "24/10 • 14:30",
     price: 850.00,
-    status: "analysis", // Em Análise
+    status: "analysis",
     icon: "phone-portrait-outline"
   },
   {
     id: "9282",
     client: "Mariana Souza",
     device: "Macbook Air M1 - Limpeza",
-    date: "23/10/2023 • 09:15",
+    date: "23/10 • 09:15",
     price: 350.00,
-    status: "waiting_parts", // Aguardando Peça
+    status: "waiting_parts",
     icon: "laptop-outline"
   },
   {
     id: "9275",
     client: "Roberto Almeida",
     device: "Samsung Tab S7 - Bateria",
-    date: "22/10/2023 • 18:00",
+    date: "22/10 • 18:00",
     price: 420.00,
-    status: "ready", // Pronto
+    status: "ready",
     icon: "tablet-portrait-outline"
   },
   {
@@ -47,36 +47,36 @@ const MOCK_ORDERS = [
     client: "Ana Clara",
     device: "PS5 - HDMI Quebrado",
     date: "Hoje • 08:00",
-    price: 0, // A definir
-    status: "open", // Aberto
+    price: 0, 
+    status: "open",
     icon: "game-controller-outline"
   }
 ];
 
-// Configuração dos Status (Cores e Textos)
+// Configuração Visual dos Status
 const STATUS_CONFIG: any = {
   analysis: { 
     label: "Em Análise", 
-    color: "#854D0E", 
-    bg: "rgba(234, 197, 79, 0.2)", 
-    dot: colors.primary 
+    color: "#B45309", // Texto
+    bg: "#FEF3C7",    // Fundo Amarelo Claro
+    dot: "#F59E0B"    // Bolinha
   },
   waiting_parts: { 
     label: "Aguardando Peça", 
-    color: "#9A3412", 
-    bg: "#FFEDD5", 
-    dot: "#F97316" 
+    color: "#B91C1C", 
+    bg: "#FEE2E2", // Vermelho Claro
+    dot: "#EF4444" 
   },
   ready: { 
-    label: "Pronto", 
-    color: "#166534", 
-    bg: "#DCFCE7", 
+    label: "Pronto para Retirar", 
+    color: "#15803d", 
+    bg: "#DCFCE7", // Verde Claro
     dot: "#22C55E" 
   },
   open: { 
-    label: "Aberto", 
-    color: "#4B5563", 
-    bg: "#F3F4F6", 
+    label: "Em Aberto", 
+    color: "#374151", 
+    bg: "#F3F4F6", // Cinza
     dot: "#9CA3AF" 
   }
 };
@@ -86,11 +86,29 @@ export default function OrdersScreen() {
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
+  const filteredOrders = MOCK_ORDERS.filter(o => {
+      // Filtro de Texto
+      const matchesSearch = o.client.toLowerCase().includes(search.toLowerCase()) || 
+                            o.id.includes(search);
+      
+      // Filtro de Tab
+      if (activeFilter === "Todos") return matchesSearch;
+      if (activeFilter === "Em Aberto") return matchesSearch && o.status === "open";
+      if (activeFilter === "Em Análise") return matchesSearch && o.status === "analysis";
+      if (activeFilter === "Prontos") return matchesSearch && o.status === "ready";
+      
+      return matchesSearch;
+  });
+
   const renderOrderItem = ({ item }: any) => {
-    const status = STATUS_CONFIG[item.status];
+    const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.open;
     
     return (
-      <TouchableOpacity style={styles.orderCard} activeOpacity={0.7}>
+      <TouchableOpacity 
+         style={styles.orderCard} 
+         activeOpacity={0.7}
+         onPress={() => router.push(`/orders/${item.id}` as any)} // Futura tela de detalhes
+      >
         {/* Header do Card */}
         <View style={styles.cardHeader}>
           <Text style={styles.osNumber}>OS #{item.id}</Text>
@@ -100,7 +118,7 @@ export default function OrdersScreen() {
         {/* Corpo do Card */}
         <View style={styles.cardBody}>
           <View style={styles.deviceIconBox}>
-             <Ionicons name={item.icon} size={24} color={colors.text.main} />
+             <Ionicons name={item.icon as any} size={24} color="#374151" />
           </View>
           <View>
             <Text style={styles.clientName}>{item.client}</Text>
@@ -115,10 +133,10 @@ export default function OrdersScreen() {
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
           
-          <Text style={[styles.priceText, item.price === 0 && { color: colors.text.light, fontSize: 14 }]}>
+          <Text style={[styles.priceText, item.price === 0 && { color: "#9CA3AF", fontSize: 13, fontWeight: "500" }]}>
             {item.price > 0 
               ? item.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) 
-              : "A definir"}
+              : "Orçamento Pendente"}
           </Text>
         </View>
       </TouchableOpacity>
@@ -127,39 +145,35 @@ export default function OrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.main} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pedidos e Ordens</Text>
+        <View style={{ width: 40 }} /> 
+        <Text style={styles.headerTitle}>Minhas Ordens</Text>
         <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color={colors.text.main} />
-          <View style={styles.notificationDot} />
+          <Ionicons name="filter" size={20} color="#374151" />
         </TouchableOpacity>
       </View>
 
       {/* SEARCH */}
       <View style={styles.searchContainer}>
         <View style={styles.inputWrapper}>
-          <Ionicons name="search" size={20} color={colors.text.light} />
+          <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput 
             style={styles.searchInput}
-            placeholder="Buscar cliente, OS ou aparelho..."
-            placeholderTextColor={colors.text.light}
+            placeholder="Buscar por cliente, OS ou aparelho..."
+            placeholderTextColor="#9CA3AF"
             value={search}
             onChangeText={setSearch}
           />
-          <Ionicons name="options-outline" size={20} color={colors.text.light} />
         </View>
       </View>
 
       {/* FILTERS */}
       <View style={styles.filtersContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-          {["Todos", "Em Análise", "Aguardando Peça", "Prontos"].map((filter) => (
+          {["Todos", "Em Aberto", "Em Análise", "Prontos"].map((filter) => (
             <TouchableOpacity 
               key={filter}
               style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
@@ -175,20 +189,27 @@ export default function OrdersScreen() {
 
       {/* LISTA */}
       <FlatList
-        data={MOCK_ORDERS}
+        data={filteredOrders}
         keyExtractor={(item) => item.id}
         renderItem={renderOrderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+            <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Ionicons name="clipboard-outline" size={48} color="#D1D5DB" />
+                <Text style={{ marginTop: 12, color: "#9CA3AF" }}>Nenhum pedido encontrado.</Text>
+            </View>
+        }
       />
 
-      {/* FAB (Botão Novo Pedido) */}
+      {/* FAB Expandido (Texto + Ícone) */}
       <TouchableOpacity 
         style={styles.fab} 
         activeOpacity={0.8}
-        onPress={() => alert("Nova OS (Em breve)")}
+        onPress={() => router.push("/sales/create")} // Rota para criar
       >
-        <Ionicons name="add" size={32} color={colors.text.onPrimary} />
+        <Ionicons name="add" size={24} color="#000" />
+        <Text style={styles.fabText}>Nova OS</Text>
       </TouchableOpacity>
 
     </View>

@@ -7,154 +7,163 @@ import {
   StatusBar, 
   ScrollView, 
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  Alert
+  Alert,
+  FlatList
 } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../src/constants/colors"; // Caminho corrigido
-import { styles } from "./create.styles";
+import { useRouter } from "expo-router";
+import { colors } from "../../src/constants/colors";
+import { salesStyles as styles } from "./sales.styles";
 
-export default function SalesCreateScreen() {
+// Mock de Produtos
+const PRODUCTS = [
+  { id: "1", name: "iPhone 13 Pro", price: 4200, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-pro-graphite-select?wid=470&hei=556&fmt=png-alpha" },
+  { id: "2", name: "Capa MagSafe", price: 150, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MM293?wid=572&hei=572&fmt=jpeg&qlt=95" },
+  { id: "3", name: "Película 3D", price: 50, image: null },
+  { id: "4", name: "Carregador 20W", price: 120, image: null },
+];
+
+export default function CreateOrderScreen() {
   const router = useRouter();
-  
-  // Estado do Método de Pagamento (Padrão: Cartão, igual ao HTML)
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "card" | "cash">("card");
-  const [clientName, setClientName] = useState("");
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState("Consumidor Final");
 
-  // Dados Mockados (Simulando o HTML)
-  const product = {
-    name: "iPhone 13 Pro 256GB",
-    variant: "Grafite",
-    price: 7599.00,
-    image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-pro-graphite-select?wid=470&hei=556&fmt=png-alpha&.v=1645552346276" // Imagem ilustrativa
+  // Adicionar ao Carrinho
+  const addToCart = (product: any) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => 
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
   };
 
-  function handleFinishSale() {
-    if (!clientName.trim()) {
-      Alert.alert("Atenção", "Por favor, identifique o cliente.");
+  // Calcular Total
+  const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+  const handleFinish = () => {
+    if (cart.length === 0) {
+      Alert.alert("Carrinho Vazio", "Adicione produtos para continuar.");
       return;
     }
-    Alert.alert("Sucesso", "Venda realizada com sucesso!", [
-      { text: "OK", onPress: () => router.back() }
+    // Lógica de salvar...
+    Alert.alert("Pedido Criado!", `Total: R$ ${total.toFixed(2)}`, [
+        { text: "OK", onPress: () => router.push("/(tabs)/orders") }
     ]);
-  }
-
-  // Componente Auxiliar para Botão de Pagamento
-  const PaymentOption = ({ type, icon, label }: { type: "pix" | "card" | "cash", icon: any, label: string }) => {
-    const isSelected = paymentMethod === type;
-    return (
-      <TouchableOpacity 
-        style={[styles.paymentOption, isSelected && styles.paymentOptionSelected]}
-        onPress={() => setPaymentMethod(type)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.iconCircle, isSelected && styles.iconCircleSelected]}>
-          <Ionicons 
-            name={icon} 
-            size={24} 
-            color={isSelected ? "#000" : colors.text.main} 
-          />
-        </View>
-        <Text style={styles.paymentText}>{label}</Text>
-        {isSelected && <View style={styles.checkBadge} />}
-      </TouchableOpacity>
-    );
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.main} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+          <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.title}>Realizar Venda</Text>
+        <Text style={styles.headerTitle}>Novo Pedido</Text>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="qr-code-outline" size={20} color="#000" />
+        </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          
-          {/* 1. Card do Produto */}
-          <View style={styles.productCard}>
-            <View style={styles.productInfo}>
-              <View>
-                <View style={styles.stockBadge}>
-                  <Text style={styles.stockText}>Em estoque</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        
+        {/* 1. SELEÇÃO DE CLIENTE */}
+        <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Cliente</Text>
+            <TouchableOpacity style={styles.clientRow} onPress={() => Alert.alert("Selecionar Cliente")}>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                    <Ionicons name="person-circle" size={24} color="#9CA3AF" />
+                    <Text style={styles.clientName}>{selectedClient}</Text>
                 </View>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productVariant}>{product.variant}</Text>
-              </View>
-              <Text style={styles.productPrice}>
-                {product.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </Text>
-            </View>
-            <View style={styles.productImageContainer}>
-              <Image source={{ uri: product.image }} style={styles.productImage} />
-            </View>
-          </View>
+                <Text style={styles.changeClientText}>Alterar</Text>
+            </TouchableOpacity>
+        </View>
 
-          {/* 2. Input de Cliente */}
-          <Text style={styles.sectionLabel}>Cliente</Text>
-          <View style={styles.clientInputContainer}>
-            <TextInput
-              style={styles.clientInput}
-              placeholder="Buscar cliente ou CPF..."
-              placeholderTextColor={colors.text.light}
-              value={clientName}
-              onChangeText={setClientName}
-            />
-            <Ionicons name="search" size={20} color={colors.primary} />
-          </View>
-
-          {/* 3. Forma de Pagamento */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
-            <Text style={styles.sectionLabel}>Forma de Pagamento</Text>
-          </View>
-          <View style={styles.paymentGrid}>
-            <PaymentOption type="pix" icon="qr-code-outline" label="Pix" />
-            <PaymentOption type="card" icon="card-outline" label="Cartão" />
-            <PaymentOption type="cash" icon="cash-outline" label="Dinheiro" />
-          </View>
-
-          {/* 4. Resumo do Pedido */}
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal (1 item)</Text>
-              <Text style={styles.summaryValue}>R$ 7.599,00</Text>
+        {/* 2. BUSCA PRODUTOS */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+            <View style={{ 
+                flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', 
+                borderRadius: 12, paddingHorizontal: 12, height: 48, borderWidth: 1, borderColor: '#E5E7EB' 
+            }}>
+                <Ionicons name="search" size={20} color="#9CA3AF" />
+                <TextInput 
+                    style={{ flex: 1, marginLeft: 8 }} 
+                    placeholder="Buscar produto..."
+                    value={search}
+                    onChangeText={setSearch}
+                />
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Descontos</Text>
-              <Text style={{ ...styles.summaryValue, color: colors.success }}>- R$ 0,00</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>R$ 7.599,00</Text>
-            </View>
-          </View>
+        </View>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Footer Fixo */}
-      <View style={styles.footer}>
-        <View style={{ marginBottom: 12 }}>
-          <Text style={styles.footerTotalLabel}>Total a pagar</Text>
-          <Text style={styles.footerTotalValue}>R$ 7.599,00</Text>
+        {/* 3. GRID DE PRODUTOS */}
+        <View style={styles.gridContainer}>
+            {PRODUCTS.map((product) => (
+                <TouchableOpacity 
+                    key={product.id} 
+                    style={styles.productCardSmall}
+                    onPress={() => addToCart(product)}
+                >
+                    {product.image ? (
+                        <Image source={{ uri: product.image }} style={styles.prodImageSmall} />
+                    ) : (
+                        <View style={[styles.prodImageSmall, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Ionicons name="cube-outline" size={32} color="#D1D5DB" />
+                        </View>
+                    )}
+                    <Text style={styles.prodName} numberOfLines={2}>{product.name}</Text>
+                    <Text style={styles.prodPrice}>
+                        R$ {product.price.toFixed(2)}
+                    </Text>
+                    <View style={styles.addButtonSmall}>
+                        <Ionicons name="add" size={18} color="#000" />
+                    </View>
+                </TouchableOpacity>
+            ))}
         </View>
         
-        <TouchableOpacity style={styles.checkoutButton} onPress={handleFinishSale}>
-          <Text style={styles.checkoutButtonText}>FINALIZAR VENDA</Text>
-          <Ionicons name="arrow-forward" size={20} color="#000" />
+        {/* 4. LISTA DE ITENS NO CARRINHO (RESUMO) */}
+        {cart.length > 0 && (
+            <View style={[styles.sectionCard, { marginTop: 12 }]}>
+                <Text style={styles.sectionTitle}>Itens no Pedido ({cart.length})</Text>
+                {cart.map((item) => (
+                    <View key={item.id} style={styles.itemRow}>
+                        <View style={styles.qtyBadge}>
+                            <Text style={styles.qtyText}>{item.qty}x</Text>
+                        </View>
+                        <View style={styles.itemInfo}>
+                            <Text style={{ fontFamily: "Poppins_500Medium" }}>{item.name}</Text>
+                            <Text style={{ fontSize: 12, color: "#6B7280" }}>Unit: R$ {item.price}</Text>
+                        </View>
+                        <Text style={styles.itemPrice}>
+                            R$ {(item.price * item.qty).toFixed(2)}
+                        </Text>
+                    </View>
+                ))}
+            </View>
+        )}
+
+      </ScrollView>
+
+      {/* FOOTER FLUTUANTE */}
+      <View style={styles.footer}>
+        <View>
+            <Text style={styles.totalLabel}>Total a Pagar</Text>
+            <Text style={styles.totalValue}>
+                {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </Text>
+        </View>
+        <TouchableOpacity style={styles.checkoutButton} onPress={handleFinish}>
+            <Text style={styles.checkoutText}>Finalizar</Text>
+            <Ionicons name="arrow-forward" size={18} color="#000" />
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }
