@@ -32,13 +32,8 @@ export default function SignupStep3() {
       return;
     }
 
-    // Sucesso!
-    Alert.alert("Bem-vindo!", "Sua conta foi criada com sucesso.", [
-        { 
-            text: "Ir para o App", 
-            onPress: () => router.replace("/(tabs)/home") // Zera a pilha e vai pra Home
-        }
-    ]);
+    // MUDANÇA: Vai para a configuração do Assistente (Step 4)
+    router.push("/signup/step4");
   };
 
   return (

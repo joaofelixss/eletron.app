@@ -16,10 +16,13 @@ import { styles } from "./profile.styles";
 export default function ProfileScreen() {
   const router = useRouter();
 
+  // URL do Avatar gerada pela API DiceBear (Você pode mudar o 'seed' dinamicamente depois)
+  const avatarUrl = "https://api.dicebear.com/9.x/avataaars/png?seed=Joao&backgroundColor=b6e3f4";
+
   const handleLogout = () => {
     Alert.alert(
       "Sair", 
-      "Deseja realmente sair?",
+      "Deseja realmente sair do Eletron?",
       [
         { text: "Cancelar", style: "cancel" },
         { text: "Sair", style: "destructive", onPress: () => router.replace("/") }
@@ -92,19 +95,23 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
-        {/* 1. PROFILE HEADER */}
+        {/* 1. PROFILE HEADER (Com Avatar DiceBear Clicável) */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            activeOpacity={0.9}
+            onPress={() => router.push("/profile/avatar-editor")} // <--- Link para o Editor
+          >
             <View style={styles.avatarBox}>
               <Image 
-                source={{ uri: "https://ui-avatars.com/api/?name=Joao+Silva&background=0A0A0A&color=EAC54F&size=256" }} 
+                source={{ uri: avatarUrl }} 
                 style={styles.avatarImage} 
               />
             </View>
-            <TouchableOpacity style={styles.editButton}>
+            <View style={styles.editButton}>
               <Ionicons name="pencil" size={14} color={colors.text.onPrimary} />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
           
           <Text style={styles.userName}>João Silva</Text>
           <Text style={styles.userStore}>TechFix Mobile</Text>
@@ -134,33 +141,40 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 3. MENU GROUP 1 */}
+        {/* 3. MENU GROUP 1 (Dados e Loja) */}
         <View style={styles.menuGroup}>
           <View style={styles.cardGroup}>
             <MenuItem 
               icon="person-outline" 
               title="Meus Dados" 
-              subtitle="Informações pessoais e de login"
-              onPress={() => {}}
+              subtitle="Informações pessoais e avatar"
+              onPress={() => router.push("/profile/avatar-editor")} // Atalho para editar também
             />
             <MenuItem 
               icon="storefront-outline" 
-              title="Minha Loja" 
-              subtitle="Configurações do estabelecimento"
-              onPress={() => {}}
+              title="Catálogo & Loja" 
+              subtitle="Gerenciar produtos e vitrine"
+              onPress={() => router.push("/catalog")} // <--- Link para o Catálogo
             />
             <MenuItem 
               icon="trophy-outline" 
               title="Assinatura" 
-              subtitle="Gerenciar plano"
+              subtitle="Gerenciar plano Eletron"
               isPro
               hasSeparator={false}
-              onPress={() => {}}
+              onPress={() => router.push("/subscription/plans")} // <--- Link para os Planos
+            />
+            <MenuItem 
+              icon="people-outline" 
+              title="Gerenciar Equipe Digital" // Novo nome
+              subtitle="Configure seus assistentes IA"
+              onPress={() => router.push("/settings/assistants")} 
+              isLast
             />
           </View>
         </View>
 
-        {/* 4. MENU GROUP 2 */}
+        {/* 4. MENU GROUP 2 (Suporte e Sair) */}
         <View style={styles.menuGroup}>
           <View style={styles.cardGroup}>
             <MenuItem 
@@ -176,12 +190,6 @@ export default function ProfileScreen() {
               hasSeparator={false}
               onPress={handleLogout}
             />
-            <MenuItem 
-  icon="storefront-outline" 
-  title="Minha Loja / Catálogo" // Atualizei o nome
-  subtitle="Configurações do estabelecimento"
-  onPress={() => router.push("/catalog")} // <--- Link para a nova tela
-/>
           </View>
           
           <Text style={styles.versionText}>Eletron App v1.2.0</Text>

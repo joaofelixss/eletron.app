@@ -50,7 +50,7 @@ export const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Inputs
+  // Inputs & Forms
   form: {
     gap: 20,
   },
@@ -82,6 +82,71 @@ export const styles = StyleSheet.create({
     color: colors.text.main,
     height: "100%",
   },
+
+  // --- ESTILOS ESPECÍFICOS DO STEP 4 (ASSISTENTE) ---
+  
+  // Área de Preview do Avatar
+  avatarPreviewContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  avatarCircle: {
+    width: 140, 
+    height: 140, 
+    borderRadius: 70, 
+    borderWidth: 4, 
+    borderColor: colors.primary,
+    justifyContent: "center", 
+    alignItems: "center",
+    marginBottom: 16, 
+    overflow: "hidden",
+  },
+  
+  // Botão "Gerar Outro"
+  randomButton: {
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 6,
+    backgroundColor: colors.surface, 
+    paddingHorizontal: 12, 
+    paddingVertical: 6,
+    borderRadius: 20, 
+    borderWidth: 1, 
+    borderColor: colors.border,
+  },
+  randomButtonText: {
+    fontFamily: "Poppins_500Medium", 
+    fontSize: 12,
+    color: colors.text.main,
+  },
+
+  // Seleção (Robô/Humano e Personalidade)
+  rowContainer: {
+    flexDirection: "row", 
+    gap: 12,
+  },
+  selectionCard: {
+    flex: 1, 
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center", 
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectionCardActive: {
+    backgroundColor: "rgba(234, 197, 79, 0.15)", // Amarelo bem clarinho
+    borderColor: colors.primary,
+  },
+  selectionText: {
+    fontFamily: "Poppins_600SemiBold", 
+    marginLeft: 8,
+    color: colors.text.main,
+  },
+
+  // --------------------------------------------------
 
   // Button (Fixed at bottom)
   footer: {

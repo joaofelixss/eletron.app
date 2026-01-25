@@ -81,7 +81,7 @@ export default function WelcomeBackScreen() {
             elevation: 5
           }}
           activeOpacity={0.8}
-          onPress={() => router.replace("/(tabs)/home")} // Vai direto pra Home
+          onPress={() => router.replace("/(tabs)/home/home")} // Vai direto pra Home
         >
           <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 16, color: colors.text.onPrimary }}>
             Acessar minha conta
