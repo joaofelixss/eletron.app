@@ -1,10 +1,10 @@
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet, Platform, Dimensions } from "react-native";
 import { colors } from "../../src/constants/colors";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background, // Branco ou Gelo
+    backgroundColor: colors.background,
   },
   
   // HEADER
@@ -16,6 +16,11 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: colors.text.main,
+  },
   closeButton: {
     width: 40,
     height: 40,
@@ -24,228 +29,248 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
   },
-  headerTitle: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 16,
-    color: colors.text.main,
-  },
-
   content: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-
-  // TITLE SECTION
+  
+  // HERO
   heroSection: {
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 10,
+    marginBottom: 20,
   },
   heroTitle: {
     fontFamily: "Poppins_700Bold",
-    fontSize: 28,
+    fontSize: 24,
     color: colors.text.main,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  heroSubtitle: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
-    color: colors.text.muted,
-    textAlign: "center",
-    maxWidth: "80%",
   },
 
-  // TOGGLE (Mensal/Anual)
-  toggleContainer: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    padding: 4,
-    borderRadius: 12,
-    marginBottom: 32,
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    position: "relative",
-  },
-  toggleButton: {
+  // STATUS ATUAL
+  currentPlanBanner: {
+    backgroundColor: "#E5E7EB",
     paddingVertical: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: "center",
+    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  currentPlanText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 12,
+    color: "#4B5563",
+  },
+  currentPlanBold: {
+    fontFamily: "Poppins_700Bold",
+    color: colors.text.main,
+  },
+
+  // 1. SELETOR DE CICLO
+  cycleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 32, // Mais espaço por causa dos balões
+    marginTop: 10,
+  },
+  cycleBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
     borderRadius: 8,
+    position: "relative",
+    zIndex: 1,
   },
-  toggleActive: {
-    backgroundColor: colors.cardDark, // Preto no ativo
+  cycleBtnActive: {
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 2,
   },
-  toggleText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: colors.text.muted,
+  cycleText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 12,
+    color: "#6B7280",
   },
-  toggleTextActive: {
-    color: "#FFF",
+  cycleTextActive: {
+    color: "#000",
+    fontWeight: "bold",
   },
-  discountBadge: {
+  
+  // Balões de desconto (Badges)
+  badgeTop: {
     position: "absolute",
-    top: -12,
-    right: -10,
+    top: -14,
     backgroundColor: colors.success,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    transform: [{ rotate: "12deg" }],
+    paddingVertical: 3,
+    borderRadius: 8,
+    zIndex: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 2,
+    elevation: 3,
   },
-  discountText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 10,
+  badgeTopText: {
+    fontSize: 9,
+    fontWeight: "bold",
     color: "#FFF",
+    textTransform: "uppercase",
   },
 
-  // CARDS
-  cardsContainer: {
-    gap: 20,
+  // 2. ABAS DE PLANOS
+  tabsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+    height: 60, // Altura fixa para acomodar o troféu
+    alignItems: "flex-end", // Alinha botões por baixo
   },
-  
-  // Base Card
-  planCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 24,
+  tabButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  
-  // BLACK Card (Destaque)
-  blackCard: {
-    backgroundColor: colors.cardDark, // Preto
-    borderColor: colors.primary,     // Borda Dourada
-    borderWidth: 1.5,
-    transform: [{ scale: 1.02 }], // Levemente maior
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFF",
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
-    overflow: "hidden",
   },
-  recommendedBadge: {
+  tabText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  // Troféu flutuante
+  trophyIcon: {
+    position: "absolute",
+    top: -24,
+    zIndex: 20,
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+
+  // 3. CARD CENTRAL
+  mainCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    borderWidth: 2, 
+    padding: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 5,
+    position: "relative",
+    overflow: "visible",
+  },
+  cardBadge: {
     position: "absolute",
     top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primary,
+    left: "50%",
+    transform: [{ translateX: -70 }], 
+    width: 140,
+    paddingVertical: 6,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     alignItems: "center",
-    paddingVertical: 4,
   },
-  recommendedText: {
+  cardBadgeText: {
+    color: "#FFF",
     fontFamily: "Poppins_700Bold",
-    fontSize: 10,
-    color: "#000",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    fontSize: 12,
   },
-
-  // Card Content
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    marginTop: 8,
+  pricingHeader: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 20,
   },
-  planName: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 20,
-    color: colors.text.main,
-  },
-  planNameDark: {
-    color: "#FFF", // Nome branco no card preto
-  },
-  planDesc: {
+  totalLabel: {
     fontFamily: "Poppins_500Medium",
     fontSize: 12,
-    color: colors.text.muted,
-  },
-  
-  priceContainer: {
-    alignItems: "flex-end",
+    color: "#6B7280",
+    marginBottom: 4,
   },
   priceValue: {
     fontFamily: "Poppins_700Bold",
-    fontSize: 28,
+    fontSize: 36,
     color: colors.text.main,
   },
-  priceValueDark: {
-    color: colors.primary, // Preço dourado no card preto
-  },
-  pricePeriod: {
+  priceSubtitle: {
     fontFamily: "Poppins_400Regular",
     fontSize: 12,
-    color: colors.text.muted,
+    color: colors.text.light,
+    marginTop: 4,
   },
-
+  savingText: {
+    marginTop: 12,
+    fontFamily: "Poppins_700Bold",
+    fontSize: 12,
+    color: colors.success,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
-    marginBottom: 16,
+    backgroundColor: "#F3F4F6",
+    marginBottom: 20,
   },
-  dividerDark: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-
-  // Features List
-  featuresList: {
+  featureList: {
     gap: 12,
     marginBottom: 24,
   },
-  featureItem: {
+  featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   featureText: {
+    flex: 1,
     fontFamily: "Poppins_500Medium",
     fontSize: 13,
-    color: colors.text.body,
-  },
-  featureTextDark: {
-    color: "#E5E7EB", // Texto claro no card preto
-  },
-
-  // Button
-  cardButton: {
-    width: "100%",
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-  },
-  cardButtonDark: {
-    backgroundColor: colors.primary, // Botão Dourado
-    borderColor: colors.primary,
-  },
-  buttonText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 14,
     color: colors.text.main,
   },
-  buttonTextDark: {
-    color: "#000", // Texto preto no botão dourado
+  newBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    borderRadius: 4,
   },
-
-  footerText: {
+  newBadgeText: {
+    fontSize: 8,
+    fontWeight: "bold",
+  },
+  actionButton: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  actionButtonText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: "#FFF",
+  },
+  footerNote: {
     textAlign: "center",
-    marginTop: 32,
+    marginTop: 16,
     fontFamily: "Poppins_400Regular",
     fontSize: 10,
-    color: colors.text.light,
-    paddingHorizontal: 20,
+    color: "#9CA3AF",
   },
 });

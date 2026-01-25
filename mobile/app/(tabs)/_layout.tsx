@@ -1,129 +1,152 @@
+import React, { useEffect, useRef } from "react";
+import { 
+  View, 
+  Platform, 
+  Animated, 
+  StyleSheet
+} from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/constants/colors";
-import { Platform, View } from "react-native";
+
+// --- COMPONENTE DE ÍCONE ANIMADO ---
+const AnimatedIcon = ({ name, focused, color, size }: any) => {
+  const scaleValue = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (focused) {
+      // Animação de "Pulo" quando selecionado
+      Animated.spring(scaleValue, {
+        toValue: 1.2, // Aumenta um pouco
+        friction: 4,  // Efeito elástico
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Volta ao tamanho normal
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+      <Ionicons name={name} size={size} color={color} />
+    </Animated.View>
+  );
+};
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, // Esconde o texto, deixa só o ícone (mais moderno)
+        tabBarShowLabel: false, // Só ícones, sem texto
         
-        // Estilo da Barra
+        // Estilo da Barra Fixa e Clean
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopWidth: 0, // Remove a linha feia em cima
-          height: Platform.OS === "ios" ? 85 : 70, // Altura confortável
+          backgroundColor: "#FFFFFF", // Fundo Branco
+          borderTopWidth: 1,          // Linha fina no topo
+          borderTopColor: "#E5E7EB",  // Cinza claro suave
+          height: Platform.OS === "ios" ? 90 : 70, // Altura confortável
           paddingBottom: Platform.OS === "ios" ? 30 : 10,
           paddingTop: 10,
-          
-          // Sombra para destacar do fundo preto
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 5,
-          elevation: 5,
+          elevation: 0, // Remove sombra padrão do Android
+          shadowOpacity: 0, // Remove sombra padrão do iOS
         },
-        tabBarActiveTintColor: colors.primary, // Cor do ícone selecionado (Roxo)
-        tabBarInactiveTintColor: "#555", // Cor do ícone apagado
+        tabBarActiveTintColor: colors.primary, // Amarelo quando ativo
+        tabBarInactiveTintColor: "#9CA3AF",    // Cinza quando inativo
       }}
     >
-      {/* Botão HOME */}
+      {/* 1. INÍCIO (Casinha) */}
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "home" : "home-outline"} size={28} color={color} />
-            </View>
+          tabBarIcon: ({ focused, color }) => (
+            <AnimatedIcon 
+              name={focused ? "home" : "home-outline"} 
+              size={26} 
+              color={color} 
+              focused={focused} 
+            />
           ),
         }}
       />
 
-      {/* Botão PRODUTOS */}
-      <Tabs.Screen
-        name="products"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "cube" : "cube-outline"} size={28} color={color} />
-            </View>
-          ),
-        }}
-      />
-
-     {/* Botão CONFIGURAÇÕES (Settings) */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "settings" : "settings-outline"} size={28} color={color} />
-            </View>
-          ),
-        }}
-      />
-
-      {/* Botão ORDENS (Novo) */}
+      {/* 2. PEDIDOS (Carrinho) */}
       <Tabs.Screen
         name="orders"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "list" : "list-outline"} size={28} color={color} />
-            </View>
+          tabBarIcon: ({ focused, color }) => (
+            <AnimatedIcon 
+              name={focused ? "cart" : "cart-outline"} 
+              size={28} 
+              color={color} 
+              focused={focused} 
+            />
           ),
         }}
       />
 
-      {/* Botão CLIENTES */}
+      {/* 3. CHAT ELETRON IA (2 Balões) */}
+      {/* Agora aponta para o arquivo 'chat.tsx' que criamos */}
       <Tabs.Screen
-        name="clients"
+        name="chat" 
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "people" : "people-outline"} size={28} color={color} />
-            </View>
+          title: "Chat IA",
+          tabBarIcon: ({ focused, color }) => (
+            <AnimatedIcon 
+              name={focused ? "chatbubbles" : "chatbubbles-outline"} 
+              size={26} 
+              color={color} 
+              focused={focused} 
+            />
           ),
         }}
       />
 
-      {/* Botão DADOS (Analytics) */}
+      {/* 4. PRODUTOS (Caixinha) */}
       <Tabs.Screen
-        name="analytics"
+        name="products"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
-            </View>
+          tabBarIcon: ({ focused, color }) => (
+            <AnimatedIcon 
+              name={focused ? "cube" : "cube-outline"} 
+              size={26} 
+              color={color} 
+              focused={focused} 
+            />
           ),
         }}
       />
 
-      {/* Botão PERFIL */}
+      {/* 5. MENU (3 Tracinhos) -> Linkado para Settings */}
       <Tabs.Screen
-        name="profile"
+        name="settings"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "person" : "person-outline"} size={28} color={color} />
-            </View>
+          tabBarIcon: ({ focused, color }) => (
+            <AnimatedIcon 
+              name={focused ? "menu" : "menu-outline"} 
+              size={30} 
+              color={color} 
+              focused={focused} 
+            />
           ),
         }}
       />
 
-      {/* Botão FORNECEDORES */}
-      <Tabs.Screen
-        name="suppliers"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: "center", justifyContent: "center", top: 5 }}>
-              <Ionicons name={focused ? "business" : "business-outline"} size={28} color={color} />
-            </View>
-          ),
-        }}
-      />
+      {/* --- TELAS OCULTAS DA BARRA (href: null) --- */}
+      {/* Elas existem mas não aparecem como botão na barra */}
+      
+      <Tabs.Screen name="clients" options={{ href: null }} />  {/* Removido visualmente */}
+      <Tabs.Screen name="clients/add" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="analytics" options={{ href: null }} />
+      <Tabs.Screen name="suppliers" options={{ href: null }} />
+      <Tabs.Screen name="scanner" options={{ href: null }} />
+      <Tabs.Screen name="trade-in/index" options={{ href: null }} />
 
     </Tabs>
   );
