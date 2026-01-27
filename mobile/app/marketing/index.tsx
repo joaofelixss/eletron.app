@@ -6,150 +6,227 @@ import {
   StatusBar, 
   ScrollView, 
   Image,
+  TextInput,
+  Clipboard,
   Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors } from "../../src/constants/colors";
-import { styles } from "./styles";
-import { LinearGradient } from "expo-linear-gradient"; // Para o efeito no preview
+// IMPORTANDO SUAS CORES
+import { colors } from "../../src/constants/colors"; 
+import { styles } from "./marketing.styles";
 
-export default function MarketingScreen() {
+const JUH_TIPS = [
+  "💡 Dica: Vídeos de 'bastidores' geram 3x mais confiança que fotos estáticas.",
+  "💡 Dica: Use enquetes nos Stories perguntando 'Qual a cor favorita?'.",
+];
+
+const CONTENT_IDEAS = [
+  { id: '1', title: "Antes e Depois", type: "Reels", difficulty: "Fácil" },
+  { id: '2', title: "Dica de Bateria", type: "Post", difficulty: "Médio" },
+  { id: '3', title: "Unboxing iPhone 15", type: "Stories", difficulty: "Fácil" },
+];
+
+export default function MarketingHubScreen() {
   const router = useRouter();
-  const [format, setFormat] = useState<"web" | "pdf">("web");
+  const [currentView, setCurrentView] = useState<"dashboard" | "copywriter">("dashboard");
+  
+  const [productName, setProductName] = useState("");
+  const [tone, setTone] = useState<"urgente" | "amigavel" | "luxo">("amigavel");
+  const [generatedText, setGeneratedText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleShare = () => {
-    const message = format === "web" 
-      ? "Link copiado! Abra o WhatsApp para colar."
-      : "Gerando PDF... Aguarde um instante.";
-    Alert.alert("Compartilhar", message);
+  const handleGenerate = () => {
+    if (!productName) return Alert.alert("Ops", "Diga o nome do produto!");
+    setLoading(true);
+    setTimeout(() => {
+      let text = "";
+      if (tone === "urgente") text = `🚨 ÚLTIMAS UNIDADES! 🚨\n\nO ${productName} está acabando! Garanta o seu com preço antigo agora.\n\n👇 Link na bio!`;
+      if (tone === "amigavel") text = `✨ Olha quem chegou! ✨\n\nO ${productName} é perfeito para quem busca qualidade. Estou apaixonada! 😍\n\nVem testar aqui na loja!`;
+      if (tone === "luxo") text = `💎 Exclusividade.\n\nApresentamos o ${productName}. Design sofisticado para quem exige excelência.\n\nDisponível agora.`;
+      setGeneratedText(text);
+      setLoading(false);
+    }, 1500);
   };
+
+  const copyToClipboard = () => {
+    Clipboard.setString(generatedText);
+    Alert.alert("Sucesso", "Texto copiado! 💅");
+  };
+
+  // --- DASHBOARD ---
+  const renderDashboard = () => (
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      
+      {/* JUH CARD */}
+      <View style={styles.juhCard}>
+        <View style={styles.juhHeader}>
+            <Image 
+                source={{ uri: "https://api.dicebear.com/9.x/avataaars/png?seed=Juh&size=100&backgroundColor=b6e3f4" }} 
+                style={styles.juhAvatar} 
+            />
+            <View style={{flex: 1}}>
+                <Text style={styles.juhName}>Oi, Chefe! Sou a Juh.</Text>
+                <Text style={styles.juhRole}>Sua Gerente de Marketing</Text>
+            </View>
+        </View>
+        <View style={styles.tipBox}>
+            <Text style={styles.tipText}>{JUH_TIPS[0]}</Text>
+        </View>
+      </View>
+
+      {/* FERRAMENTAS */}
+      <Text style={styles.sectionTitle}>Ferramentas Criativas</Text>
+      <View style={styles.toolsGrid}>
+        
+        <TouchableOpacity style={styles.toolCard} onPress={() => setCurrentView("copywriter")}>
+            <View style={[styles.toolIcon, { backgroundColor: '#F3E8FF' }]}>
+                <Ionicons name="create" size={24} color="#8B5CF6" />
+            </View>
+            <Text style={styles.toolTitle}>Gerador de Legendas</Text>
+            <Text style={styles.toolDesc}>Crie textos que vendem.</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.toolCard} onPress={() => Alert.alert("Em breve")}>
+            <View style={[styles.toolIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="pricetag" size={24} color="#D97706" />
+            </View>
+            <Text style={styles.toolTitle}>Criar Promoção</Text>
+            <Text style={styles.toolDesc}>Flyers de oferta rápida.</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.toolCard} onPress={() => Alert.alert("Link", "eletron.app/loja")}>
+            <View style={[styles.toolIcon, { backgroundColor: '#D1FAE5' }]}>
+                <Ionicons name="globe" size={24} color="#059669" />
+            </View>
+            <Text style={styles.toolTitle}>Vitrine Online</Text>
+            <Text style={styles.toolDesc}>Seu catálogo web.</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.toolCard}>
+            <View style={[styles.toolIcon, { backgroundColor: '#FCE7F3' }]}>
+                <Ionicons name="calendar" size={24} color="#DB2777" />
+            </View>
+            <Text style={styles.toolTitle}>Calendário</Text>
+            <Text style={styles.toolDesc}>Planeje a semana.</Text>
+        </TouchableOpacity>
+
+      </View>
+
+      {/* IDEIAS */}
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Ideias para hoje 📅</Text>
+      {CONTENT_IDEAS.map((idea) => (
+        <View key={idea.id} style={styles.ideaRow}>
+            <View style={styles.ideaIcon}>
+                <Ionicons 
+                    name={idea.type === "Reels" ? "videocam" : idea.type === "Stories" ? "images" : "camera"} 
+                    size={18} 
+                    color={colors.text.body} 
+                />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={styles.ideaTitle}>{idea.title}</Text>
+                <Text style={styles.ideaMeta}>{idea.type} • {idea.difficulty}</Text>
+            </View>
+            <TouchableOpacity style={styles.ideaButton}>
+                <Text style={styles.ideaButtonText}>Criar</Text>
+            </TouchableOpacity>
+        </View>
+      ))}
+
+    </ScrollView>
+  );
+
+  // --- COPYWRITER ---
+  const renderCopywriter = () => (
+    <ScrollView contentContainerStyle={styles.content}>
+        <TouchableOpacity style={styles.backLink} onPress={() => setCurrentView("dashboard")}>
+            <Ionicons name="arrow-back" size={16} color={colors.text.body} />
+            <Text style={styles.backLinkText}>Voltar ao Menu</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.pageTitle}>Gerador de Legendas ✍️</Text>
+        <Text style={styles.pageSubtitle}>Me diga o produto e o tom, que eu escrevo.</Text>
+
+        <View style={styles.formCard}>
+            <Text style={styles.label}>Produto / Serviço</Text>
+            <TextInput 
+                style={styles.input} 
+                placeholder="Ex: iPhone 14 Pro Max..." 
+                placeholderTextColor={colors.text.light}
+                value={productName}
+                onChangeText={setProductName}
+            />
+
+            <Text style={styles.label}>Tom de Voz</Text>
+            <View style={styles.toneRow}>
+                <TouchableOpacity 
+                    style={[styles.toneBadge, tone === "urgente" && styles.toneActive]}
+                    onPress={() => setTone("urgente")}
+                >
+                    <Text style={[styles.toneText, tone === "urgente" && styles.toneTextActive]}>🚨 Urgente</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.toneBadge, tone === "amigavel" && styles.toneActive]}
+                    onPress={() => setTone("amigavel")}
+                >
+                    <Text style={[styles.toneText, tone === "amigavel" && styles.toneTextActive]}>🥰 Amigável</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.toneBadge, tone === "luxo" && styles.toneActive]}
+                    onPress={() => setTone("luxo")}
+                >
+                    <Text style={[styles.toneText, tone === "luxo" && styles.toneTextActive]}>💎 Luxo</Text>
+                </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.magicButton} onPress={handleGenerate} disabled={loading}>
+                {loading ? (
+                    <Text style={styles.magicButtonText}>Escrevendo...</Text>
+                ) : (
+                    <>
+                        <Ionicons name="sparkles" size={18} color="#000" />
+                        <Text style={styles.magicButtonText}>Gerar Texto Mágico</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+        </View>
+
+        {generatedText !== "" && (
+            <View style={styles.resultContainer}>
+                <View style={styles.resultHeader}>
+                    <Text style={styles.resultTitle}>Sugestão da Juh:</Text>
+                    <View style={{flexDirection: 'row', gap: 10}}>
+                        <TouchableOpacity onPress={() => setGeneratedText("")}>
+                            <Ionicons name="refresh" size={20} color={colors.text.body} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={copyToClipboard}>
+                            <Ionicons name="copy" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <Text style={styles.resultBody}>{generatedText}</Text>
+            </View>
+        )}
+    </ScrollView>
+  );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#181811" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
       {/* HEADER */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.iconBox}>
-            <Ionicons name="flash" size={20} color={colors.primary} />
-          </View>
-          <Text style={styles.headerTitle}>Divulgação Automática</Text>
-        </View>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Text style={styles.closeText}>CONCLUIR</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+            <Ionicons name="close" size={20} color={colors.text.main} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Central de Marketing</Text>
+        <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="settings-outline" size={20} color={colors.text.main} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        
-        {/* HERO TEXT */}
-        <View style={styles.heroContainer}>
-          <Text style={styles.heroTitle}>
-            Pronto para{"\n"}
-            <Text style={styles.highlight}>Divulgar</Text>
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            A IA gerou estes materiais de marketing para o seu novo produto.
-          </Text>
-        </View>
-
-        {/* SEGMENTED CONTROL */}
-        <View style={styles.segmentedControl}>
-          <TouchableOpacity 
-            style={[styles.segmentButton, format === "web" && styles.segmentActive]}
-            onPress={() => setFormat("web")}
-          >
-            <Ionicons name="globe-outline" size={18} color={format === "web" ? "#000" : "#999"} />
-            <Text style={[styles.segmentText, format === "web" && styles.segmentTextActive]}>Link Web</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.segmentButton, format === "pdf" && styles.segmentActive]}
-            onPress={() => setFormat("pdf")}
-          >
-            <Ionicons name="document-text-outline" size={18} color={format === "pdf" ? "#000" : "#999"} />
-            <Text style={[styles.segmentText, format === "pdf" && styles.segmentTextActive]}>Flyer PDF</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* PREVIEW CARD */}
-        <View style={{ width: '100%', alignItems: 'center' }}>
-          {/* Efeito Glow atrás */}
-          <View style={styles.glowEffect} />
-          
-          <View style={styles.previewCard}>
-            <View style={styles.imageContainer}>
-              <Image 
-                source={{ uri: "https://images.unsplash.com/photo-1603351154351-5cf99bc32f2d?auto=format&fit=crop&q=80&w=400" }} 
-                style={styles.productImage} 
-              />
-              
-              <View style={styles.aiBadge}>
-                <Ionicons name="sparkles" size={12} color={colors.primary} />
-                <Text style={styles.aiBadgeText}>Gerado por IA</Text>
-              </View>
-
-              {/* Browser Overlay (Simulação) */}
-              <View style={styles.browserOverlay}>
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.9)']}
-                  style={styles.browserGradient}
-                />
-                <View style={styles.browserContent}>
-                  <View style={styles.browserIcon}>
-                    <Ionicons name="flash" size={16} color="#000" />
-                  </View>
-                  <View style={styles.browserUrl}>
-                    <Text style={styles.urlTitle}>iPhone 13 Pro - Oferta</Text>
-                    <Text style={styles.urlLink}>eletron.app/vitrine/iphone-13</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.cardBody}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>Vitrine Digital</Text>
-                  <Text style={styles.cardSubtitle}>Otimizado para mobile e conversão.</Text>
-                </View>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>ATIVO</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Ionicons name="eye-outline" size={14} color="#999" />
-                  <Text style={styles.statText}>Pronto para visualização</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color="#999" />
-                  <Text style={styles.statText}>Estoque verificado</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-      </ScrollView>
-
-      {/* FOOTER ACTIONS */}
-      <View style={styles.actionContainer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleShare}>
-          <Ionicons name="logo-whatsapp" size={20} color="#000" />
-          <Text style={styles.primaryButtonText}>Compartilhar Link</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Ionicons name="download-outline" size={20} color="#FFF" />
-          <Text style={styles.secondaryButtonText}>Baixar PDF da Vitrine</Text>
-        </TouchableOpacity>
-      </View>
+      {currentView === "dashboard" ? renderDashboard() : renderCopywriter()}
 
     </View>
   );

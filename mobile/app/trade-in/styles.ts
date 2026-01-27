@@ -1,155 +1,148 @@
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet, Platform, Dimensions } from "react-native";
 import { colors } from "../../src/constants/colors";
 
-// Paleta Específica desta Tela (Dark Olive/Military)
-const theme = {
-  bg: "#181811",
-  surface: "#27271b",
-  border: "#54543b",
-  textSecondary: "#baba9c",
-  primary: "#f2f20d",
-};
+const { width } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.bg,
+    backgroundColor: "#18181B", // Fundo Dark (Zinc 900)
   },
-  
+
   // HEADER
   header: {
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-    zIndex: 10,
+  },
+  headerTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 18,
+    color: "#FFF",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
-  },
-  headerTitle: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 18,
-    color: "#FFF",
-    textAlign: "center",
-    flex: 1,
-    marginRight: 40,
   },
 
+  // CONTENT
   content: {
-    paddingBottom: 140, // Espaço para o footer grande
+    paddingBottom: 280, // Espaço GRANDE para o Footer Fixo
   },
-
-  // SEÇÃO: APARELHO DE ENTRADA
+  
+  // SEÇÃO DE ENTRADA (CARD PRETO MAIS CLARO)
+  formContainer: {
+    backgroundColor: "#27272A", // Zinc 800
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#3F3F46",
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 10,
+    marginBottom: 16,
+    gap: 12,
   },
   iconBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(242, 242, 13, 0.2)", // Primary com opacidade
+    backgroundColor: "rgba(234, 197, 79, 0.1)", // Amarelo bem suave
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(234, 197, 79, 0.3)",
   },
   sectionTitle: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 18,
-    color: "#FFF",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: "#E4E4E7", // Zinc 200
   },
-  
-  // FORMULÁRIO
-  formContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 8,
-  },
+
+  // INPUTS
   label: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 14,
-    color: theme.textSecondary,
+    fontSize: 12,
+    color: "#A1A1AA", // Zinc 400
+    marginBottom: 8,
+  },
+  inputGroup: {
+    marginBottom: 16,
   },
   inputWrapper: {
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#18181B", // Fundo Input (Escuro)
     borderRadius: 12,
-    height: 52,
-    justifyContent: "center",
     paddingHorizontal: 16,
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#3F3F46",
+    justifyContent: "space-between",
   },
   input: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 14,
-    color: "#FFF",
     flex: 1,
+    fontFamily: "Poppins_500Medium",
+    color: "#FFF",
+    fontSize: 14,
   },
   row: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
   },
   flex1: {
     flex: 1,
   },
-  
-  // CARD DE VALIAÇÃO
+
+  // CARD DE AVALIAÇÃO (DESTAQUE)
   valuationCard: {
-    backgroundColor: "rgba(39, 39, 27, 0.5)",
-    borderWidth: 1,
-    borderColor: theme.border,
+    marginTop: 8,
+    backgroundColor: "#18181B",
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.primary, // Borda Amarela
+    borderStyle: "dashed", // Estilo pontilhado
   },
   valuationLabel: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 14,
-    color: "#FFF",
+    fontSize: 12,
+    color: colors.primary,
     marginBottom: 8,
   },
   valuationRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
   },
   moneyInputContainer: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.bg,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    height: 48,
-    paddingHorizontal: 12,
   },
   currencySymbol: {
-    color: theme.textSecondary,
-    fontFamily: "Poppins_500Medium",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 20,
+    color: "#FFF",
     marginRight: 4,
   },
   moneyInput: {
-    color: "#FFF",
     fontFamily: "Poppins_700Bold",
-    fontSize: 16,
-    flex: 1,
+    fontSize: 24,
+    color: "#FFF",
+    minWidth: 100,
   },
+  
+  // SUGESTÃO IA
   aiSuggestion: {
     alignItems: "flex-end",
   },
@@ -157,66 +150,68 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 2,
+    backgroundColor: "rgba(234, 197, 79, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
   },
   aiText: {
-    fontFamily: "Poppins_700Bold",
     fontSize: 10,
-    color: theme.primary,
-    textTransform: "uppercase",
+    color: colors.primary,
+    fontFamily: "Poppins_600SemiBold",
   },
   aiRange: {
-    fontFamily: "Poppins_400Regular",
     fontSize: 11,
-    color: theme.textSecondary,
+    color: "#71717A",
+    fontFamily: "Poppins_500Medium",
   },
 
+  // DIVIDER
   divider: {
     height: 1,
-    backgroundColor: theme.border,
+    backgroundColor: "#3F3F46",
     marginVertical: 24,
-    opacity: 0.5,
+    marginHorizontal: 20,
   },
 
-  // SEÇÃO: APARELHO DE SAÍDA
+  // SEÇÃO DE SAÍDA
   sectionHeaderSpace: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    marginBottom: 16,
   },
   changeItemButton: {
-    fontFamily: "Poppins_700Bold",
     fontSize: 12,
-    color: theme.primary,
-    textTransform: "uppercase",
+    color: colors.primary,
+    fontFamily: "Poppins_600SemiBold",
   },
   
-  // CARD DE PRODUTO
+  // CARD PRODUTO SAÍDA
   productCard: {
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 16,
+    backgroundColor: "#27272A",
     marginHorizontal: 20,
+    borderRadius: 20,
     padding: 16,
     flexDirection: "row",
     gap: 16,
+    borderWidth: 1,
+    borderColor: "#3F3F46",
   },
   productImage: {
     width: 80,
-    height: 96,
-    borderRadius: 8,
-    backgroundColor: theme.bg,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: "#18181B",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.border,
   },
   productDetails: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
   },
   productHeader: {
     flexDirection: "row",
@@ -224,36 +219,33 @@ export const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   productName: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 16,
     color: "#FFF",
-    lineHeight: 20,
     flex: 1,
+    marginRight: 8,
   },
   newBadge: {
-    backgroundColor: "rgba(242, 242, 13, 0.1)",
+    backgroundColor: colors.success,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    marginLeft: 8,
   },
   newText: {
-    fontFamily: "Poppins_700Bold",
     fontSize: 10,
-    color: theme.primary,
+    color: "#FFF",
+    fontWeight: "bold",
   },
   productSpec: {
-    fontFamily: "Poppins_400Regular",
     fontSize: 12,
-    color: theme.textSecondary,
-    marginTop: 4,
+    color: "#A1A1AA",
+    marginTop: -4,
   },
   sellLabel: {
-    fontFamily: "Poppins_700Bold",
     fontSize: 10,
-    color: theme.textSecondary,
+    color: "#71717A",
     textTransform: "uppercase",
-    marginTop: 12,
+    marginTop: 8,
   },
   sellPrice: {
     fontFamily: "Poppins_700Bold",
@@ -261,47 +253,47 @@ export const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-  // ACESSÓRIOS SCROLL
+  // ACESSÓRIOS
   accessoriesScroll: {
-    paddingHorizontal: 20,
+    paddingLeft: 20,
     marginTop: 16,
   },
   accessoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(39, 39, 27, 0.3)",
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: "#27272A",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#3F3F46",
+    marginRight: 8,
     gap: 6,
   },
   accessoryText: {
-    fontFamily: "Poppins_500Medium",
     fontSize: 12,
-    color: theme.textSecondary,
+    color: "#D4D4D8",
+    fontFamily: "Poppins_500Medium",
   },
 
-  // FOOTER (RESUMO FINANCEIRO)
+  // FOOTER FINANCEIRO FIXO
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#1e1e16", // Cor específica do footer no design
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
+    backgroundColor: "#1F1F22", // Ligeiramente mais claro que o fundo
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
+    padding: 24,
+    // Sombra para destacar
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#3F3F46",
   },
   summaryRow: {
     flexDirection: "row",
@@ -309,56 +301,50 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryLabel: {
-    fontFamily: "Poppins_400Regular",
     fontSize: 13,
-    color: theme.textSecondary,
+    color: "#A1A1AA",
+    fontFamily: "Poppins_500Medium",
   },
   summaryValue: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 13,
+    fontSize: 14,
     color: "#FFF",
+    fontFamily: "Poppins_600SemiBold",
   },
   summaryValuePrimary: {
-    color: theme.primary,
+    color: colors.primary, // Amarelo
   },
   dashedLine: {
     height: 1,
     borderWidth: 1,
-    borderColor: "rgba(84, 84, 59, 0.5)",
+    borderColor: "#3F3F46",
     borderStyle: "dashed",
     marginVertical: 12,
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
     marginBottom: 20,
   },
   totalLabel: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 14,
+    fontSize: 16,
     color: "#FFF",
-    marginBottom: 4,
+    fontFamily: "Poppins_600SemiBold",
   },
   totalValue: {
+    fontSize: 28, // BEM GRANDE
+    color: "#FFF",
     fontFamily: "Poppins_700Bold",
-    fontSize: 28,
-    color: theme.primary,
-    lineHeight: 32,
   },
+  
   finishButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: colors.primary,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
   finishButtonText: {
     fontFamily: "Poppins_700Bold",
