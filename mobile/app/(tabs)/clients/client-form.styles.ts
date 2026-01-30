@@ -127,4 +127,34 @@ export const formStyles = StyleSheet.create({
     fontSize: 16,
     color: colors.primary, // Texto Amarelo
   },
+
+  infoCard : {
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB"
+  },
+   infoValue : {
+    fontSize: 16, 
+    color: "#111827",
+    marginTop: 4
+},
+// --- ESTILOS DE DELETE (Faltavam no seu arquivo) ---
+  deleteButton: {
+    marginTop: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2', // Fundo vermelho claro
+    borderRadius: 12,
+  },
+  deleteText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: "#DC2626", // Texto vermelho
+  }
 });
+
+
+

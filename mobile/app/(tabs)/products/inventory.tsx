@@ -1,73 +1,139 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StatusBar, 
   FlatList, 
-  Image 
+  Image,
+  ActivityIndicator,
+  Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./inventory.styles";
 
-// MOCK DATA
-const INVENTORY_DATA = [
-  { id: "1", name: "iPhone 13 Pro", sku: "SKU-9921", stock: 5, cost: 3200.00, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-pro-graphite-select?wid=470&hei=556&fmt=png-alpha" },
-  { id: "2", name: "Samsung S21", sku: "SKU-8812", stock: 2, cost: 2100.00, image: "https://images.samsung.com/is/image/samsung/p6pim/br/galaxy-s21/gallery/br-galaxy-s21-5g-g991-sm-g991bzvgzk-thumb-368338803" },
-  { id: "3", name: "Capa MagSafe", sku: "ACC-0012", stock: 42, cost: 45.00, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MM293?wid=572&hei=572&fmt=jpeg&qlt=95" },
-  { id: "4", name: "Carregador 20W", sku: "ACC-0033", stock: 0, cost: 80.00, image: null }, // Sem foto
-];
+// 1. IMPORTAR API
+import { api } from "../../../src/services/api";
 
 export default function InventoryScreen() {
   const router = useRouter();
   
-  // Total Valuation Calculation
-  const totalValue = INVENTORY_DATA.reduce((acc, item) => acc + (item.stock * item.cost), 0);
-  const totalItems = INVENTORY_DATA.reduce((acc, item) => acc + item.stock, 0);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- BUSCAR DADOS DO MONGODB ---
+  async function fetchInventory() {
+    try {
+      const response = await api.get('/products');
+      setProducts(response.data);
+    } catch (error) {
+      console.log("Erro ao carregar estoque:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchInventory();
+    }, [])
+  );
+
+  // --- FUNÇÃO PARA ALTERAR ESTOQUE (+ / -) ---
+  const handleStockChange = async (id: string, currentStock: number, change: number) => {
+    const newStock = currentStock + change;
+    if (newStock < 0) return; 
+
+    setProducts(prev => prev.map(item => 
+        item.id === id ? { ...item, stock: newStock } : item
+    ));
+
+    try {
+        await api.patch(`/products/${id}`, { stock: newStock });
+    } catch (error) {
+        Alert.alert("Erro", "Falha ao atualizar estoque.");
+        fetchInventory(); 
+    }
+  };
+
+  // --- CÁLCULOS DINÂMICOS ---
+  const dashboardData = useMemo(() => {
+    return products.reduce((acc, item) => {
+        const stock = Number(item.stock || 0);
+        const cost = Number(item.costPrice || 0);
+        
+        acc.totalValue += stock * cost;
+        acc.totalItems += stock;
+        if (stock <= 3) acc.lowStockCount += 1;
+        
+        return acc;
+    }, { totalValue: 0, totalItems: 0, lowStockCount: 0 });
+  }, [products]);
 
   const renderItem = ({ item }: any) => {
-    const isLow = item.stock <= 3;
+    const stock = Number(item.stock || 0);
+    const cost = Number(item.costPrice || 0);
+    const isLow = stock <= 3;
 
     return (
-      <View style={styles.itemCard}>
+      // MUDANÇA AQUI: Trocamos View por TouchableOpacity para ser clicável
+      <TouchableOpacity 
+        style={styles.itemCard}
+        activeOpacity={0.9}
+        // Ao clicar no card, vai para a tela de detalhes
+        onPress={() => router.push(`/products/${item.id}`)}
+      >
         {/* Imagem + Indicador */}
         <View>
-             <Image 
-                source={{ uri: item.image || "https://via.placeholder.com/150" }} 
-                style={styles.itemImage} 
-                resizeMode="contain"
-             />
+             {item.imageUrl ? (
+                <Image 
+                    source={{ uri: item.imageUrl }} 
+                    style={styles.itemImage} 
+                    resizeMode="cover"
+                />
+             ) : (
+                <View style={[styles.itemImage, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="image-outline" size={24} color="#D1D5DB" />
+                </View>
+             )}
              {isLow && <View style={styles.lowStockIndicator} />}
         </View>
 
         {/* Info Técnica */}
         <View style={styles.itemInfo}>
             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.itemSku}>{item.sku}</Text>
+            <Text style={styles.itemSku}>{item.sku || "Sem SKU"}</Text>
             <Text style={styles.itemCost}>
-                Custo: R$ {item.cost.toLocaleString("pt-BR")}
+                Custo: {cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </Text>
         </View>
 
-        {/* Controle Rápido */}
+        {/* Controle Rápido (Os botões internos funcionam independentes) */}
         <View style={styles.stockControl}>
             <Text style={[styles.stockValue, { color: isLow ? colors.danger : "#000" }]}>
-                {item.stock}
+                {stock}
             </Text>
             
             <View style={styles.stepper}>
-                <TouchableOpacity style={styles.stepBtn}>
+                <TouchableOpacity 
+                    style={styles.stepBtn}
+                    // stopPropagation não é necessário no RN padrão, o toque interno ganha prioridade
+                    onPress={() => handleStockChange(item.id, stock, -1)}
+                >
                     <Ionicons name="remove" size={14} color="#000" />
                 </TouchableOpacity>
                 <View style={{ width: 8 }} />
-                <TouchableOpacity style={styles.stepBtn}>
+                <TouchableOpacity 
+                    style={styles.stepBtn}
+                    onPress={() => handleStockChange(item.id, stock, 1)}
+                >
                     <Ionicons name="add" size={14} color="#000" />
                 </TouchableOpacity>
             </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -82,8 +148,8 @@ export default function InventoryScreen() {
                 <Ionicons name="arrow-back" size={24} color="#FFF" />
             </TouchableOpacity>
             <Text style={styles.title}>Gestão de Estoque</Text>
-            <TouchableOpacity>
-                <Ionicons name="cloud-download-outline" size={24} color="#FFF" />
+            <TouchableOpacity onPress={fetchInventory}>
+                <Ionicons name="reload" size={24} color="#FFF" />
             </TouchableOpacity>
         </View>
 
@@ -92,7 +158,7 @@ export default function InventoryScreen() {
             <View style={styles.dashCard}>
                 <Text style={styles.dashLabel}>Valor em Estoque (Custo)</Text>
                 <Text style={styles.dashValue}>
-                    {totalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    {loading ? "..." : dashboardData.totalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </Text>
                 <Text style={styles.dashSub}>Capital parado</Text>
             </View>
@@ -100,30 +166,44 @@ export default function InventoryScreen() {
             {/* Card Quantidade */}
             <View style={styles.dashCard}>
                 <Text style={styles.dashLabel}>Total de Itens</Text>
-                <Text style={styles.dashValue}>{totalItems} un.</Text>
-                <Text style={[styles.dashSub, { color: colors.danger }]}>
-                    2 itens baixos
+                <Text style={styles.dashValue}>
+                    {loading ? "..." : `${dashboardData.totalItems} un.`}
+                </Text>
+                <Text style={[styles.dashSub, { color: dashboardData.lowStockCount > 0 ? colors.danger : '#10B981' }]}>
+                    {dashboardData.lowStockCount} itens baixos
                 </Text>
             </View>
         </View>
       </View>
 
       {/* LISTA DE ITENS */}
-      <FlatList 
-        data={INVENTORY_DATA}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Listagem de Produtos</Text>
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="filter" size={14} color="#6B7280" />
-                    <Text style={{ fontSize: 12, color: "#6B7280" }}>Filtrar</Text>
-                </TouchableOpacity>
-            </View>
-        }
-      />
+      {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 10, color: '#666' }}>Calculando inventário...</Text>
+          </View>
+      ) : (
+          <FlatList 
+            data={products}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Listagem de Produtos</Text>
+                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="filter" size={14} color="#6B7280" />
+                        <Text style={{ fontSize: 12, color: "#6B7280" }}>Filtrar</Text>
+                    </TouchableOpacity>
+                </View>
+            }
+            ListEmptyComponent={() => (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                    <Text style={{ color: '#999' }}>Nenhum produto cadastrado.</Text>
+                </View>
+            )}
+          />
+      )}
 
     </View>
   );

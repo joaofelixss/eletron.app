@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -8,15 +8,21 @@ import {
   FlatList,
   Image,
   Alert,
-  Linking
+  Linking,
+  ActivityIndicator,
+  RefreshControl
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./clients.styles";
 
-// Função para gerar cor de fundo baseada no nome (fica consistente)
+// 1. IMPORTAR API
+import { api } from "../../../src/services/api";
+
+// Função para gerar cor de fundo baseada no nome
 const getAvatarColor = (name: string) => {
+  if (!name) return "#9CA3AF";
   const colors = ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -25,71 +31,56 @@ const getAvatarColor = (name: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const MOCK_CLIENTS = [
-  {
-    id: "1",
-    name: "João Silva",
-    phone: "11998765432",
-    repairs: 3,
-    initials: "JS",
-    lastVisit: "2 dias atrás",
-    vip: true,
-    image: null
-  },
-  {
-    id: "2",
-    name: "Maria Oliveira",
-    phone: "21987654321",
-    repairs: 1,
-    initials: "MO",
-    lastVisit: "1 mês atrás",
-    vip: false,
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100"
-  },
-  {
-    id: "3",
-    name: "Carlos Santos",
-    phone: "31912345678",
-    repairs: 12,
-    initials: "CS",
-    lastVisit: "Hoje",
-    vip: true,
-    image: null
-  },
-  {
-    id: "4",
-    name: "Pedro Costa",
-    phone: "41991112222",
-    repairs: 0,
-    initials: "PC",
-    lastVisit: "Nunca",
-    vip: false,
-    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=100"
-  },
-  {
-    id: "5",
-    name: "Ana Lima",
-    phone: "51988887777",
-    repairs: 5,
-    initials: "AL",
-    lastVisit: "Ontem",
-    vip: false,
-    image: null
-  }
-];
+// Função para pegar as iniciais (Ex: João Silva -> JS)
+const getInitials = (name: string) => {
+    if (!name) return "?";
+    const names = name.trim().split(' ');
+    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+};
 
 export default function ClientsScreen() {
   const router = useRouter();
+  
+  // ESTADOS REAIS
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
 
-  const filteredClients = MOCK_CLIENTS.filter(client => 
+  // --- BUSCAR CLIENTES DO BACKEND ---
+  async function fetchClients() {
+    try {
+      if (!refreshing) setLoading(true);
+      const response = await api.get('/clients');
+      setClients(response.data);
+    } catch (error) {
+      console.log("Erro ao buscar clientes:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchClients();
+    }, [])
+  );
+
+  // Filtro Local
+  const filteredClients = clients.filter((client: any) => 
     client.name.toLowerCase().includes(search.toLowerCase()) ||
-    client.phone.includes(search)
+    (client.phone && client.phone.includes(search))
   );
 
   const handleWhatsApp = (phone: string) => {
-    // Abre o WhatsApp
-    const url = `whatsapp://send?phone=55${phone}`;
+    if (!phone) return Alert.alert("Erro", "Cliente sem telefone cadastrado.");
+    
+    // Remove tudo que não for número
+    const cleanPhone = phone.replace(/\D/g, "");
+    const url = `whatsapp://send?phone=55${cleanPhone}`;
+    
     Linking.openURL(url).catch(() => {
       Alert.alert("Erro", "WhatsApp não está instalado.");
     });
@@ -97,19 +88,21 @@ export default function ClientsScreen() {
 
   const renderClient = ({ item }: any) => {
     const avatarBg = getAvatarColor(item.name);
+    const initials = getInitials(item.name);
 
     return (
       <TouchableOpacity 
         style={styles.clientCard} 
         activeOpacity={0.7}
-        onPress={() => router.push(`/clients/${item.id}` as any)} // Navegar para detalhes (futuro)
+        // Futuramente faremos a tela de detalhes do cliente
+       onPress={() => router.push(`/clients/${item.id}`)}
       >
-        {/* Avatar */}
+        {/* Avatar Dinâmico */}
         <View style={[styles.avatarContainer, { backgroundColor: item.image ? 'transparent' : avatarBg }]}>
           {item.image ? (
             <Image source={{ uri: item.image }} style={styles.avatarImage} />
           ) : (
-            <Text style={styles.avatarText}>{item.initials}</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           )}
         </View>
 
@@ -119,24 +112,27 @@ export default function ClientsScreen() {
           
           <View style={styles.clientMetaRow}>
             <Text style={styles.clientPhone}>
-               {item.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}
+               {/* Formatação simples se tiver número */}
+               {item.phone || "Sem telefone"}
             </Text>
-            <View style={styles.dotSeparator} />
-            <Text style={styles.lastVisit}>{item.lastVisit}</Text>
+            
+            {/* Como o backend ainda não tem 'lastVisit', ocultamos ou mostramos fixo */}
+            {/* <View style={styles.dotSeparator} />
+            <Text style={styles.lastVisit}>Novo</Text> */}
           </View>
 
-          {/* Tags */}
+          {/* Tags (Baseado no CPF ou Notes por enquanto) */}
           <View style={styles.tagsRow}>
-             {/* Tag VIP */}
-             {item.vip && (
-                <View style={[styles.tag, styles.vipTag]}>
-                   <Text style={[styles.tagText, styles.vipText]}>VIP ⭐</Text>
+             {/* Exemplo: Se tiver CPF, mostra tag de Cadastro Completo */}
+             {item.cpf ? (
+                <View style={[styles.tag, { backgroundColor: '#DBEAFE' }]}>
+                    <Text style={[styles.tagText, { color: '#1E40AF' }]}>Cadastrado</Text>
+                </View>
+             ) : (
+                <View style={[styles.tag, { backgroundColor: '#F3F4F6' }]}>
+                    <Text style={[styles.tagText, { color: '#6B7280' }]}>Simples</Text>
                 </View>
              )}
-             {/* Tag Reparos */}
-             <View style={styles.tag}>
-                <Text style={styles.tagText}>{item.repairs} serviços</Text>
-             </View>
           </View>
         </View>
 
@@ -159,11 +155,9 @@ export default function ClientsScreen() {
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>Meus Clientes</Text>
-        <View style={styles.headerActions}>
-           <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.text.main} />
-           </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.iconButton} onPress={fetchClients}>
+             <Ionicons name="reload" size={20} color={colors.text.main} />
+        </TouchableOpacity>
       </View>
 
       {/* SEARCH */}
@@ -186,18 +180,38 @@ export default function ClientsScreen() {
       </View>
 
       {/* LISTA */}
-      <FlatList
-        data={filteredClients}
-        keyExtractor={(item) => item.id}
-        renderItem={renderClient}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-           <Text style={styles.sectionTitle}>
-              {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
-           </Text>
-        }
-      />
+      {loading && !refreshing ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 10, color: '#9CA3AF' }}>Buscando clientes...</Text>
+          </View>
+      ) : (
+          <FlatList
+            data={filteredClients}
+            keyExtractor={(item: any) => item.id}
+            renderItem={renderClient}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={() => {
+                    setRefreshing(true);
+                    fetchClients();
+                }} />
+            }
+            ListHeaderComponent={
+                <Text style={styles.sectionTitle}>
+                {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+                </Text>
+            }
+            ListEmptyComponent={() => (
+                <View style={{ alignItems: 'center', marginTop: 50, padding: 20 }}>
+                    <Ionicons name="people-outline" size={64} color="#E5E7EB" />
+                    <Text style={{ fontSize: 18, color: '#374151', fontWeight: 'bold', marginTop: 10 }}>Nenhum cliente</Text>
+                    <Text style={{ textAlign: 'center', color: '#9CA3AF' }}>Toque no + para cadastrar seu primeiro cliente.</Text>
+                </View>
+            )}
+          />
+      )}
 
       {/* FAB (Adicionar) */}
       <TouchableOpacity 
