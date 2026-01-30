@@ -1,8 +1,11 @@
-import React from "react";
-import { View, ScrollView, StatusBar, Image, Text, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react"; // <--- ADICIONADO
+import { View, ScrollView, StatusBar, Image, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { colors } from "../../../src/constants/colors";
+
+// IMPORTANDO SERVIÇO DE API
+import { api } from "../../../src/services/api"; // <--- ADICIONADO
 
 // IMPORTANDO ESTILOS SEPARADOS
 import { styles } from "./home.styles";
@@ -16,10 +19,36 @@ import { PlanStatusCard } from "./components/PlanStatusCard";
 
 export default function HomeScreen() {
   const router = useRouter();
-  
-  // O estado 'showAssistant' foi removido daqui porque agora ele vive na CustomTabBar
 
-  // URL do Avatar do Usuário (DiceBear)
+  // --- ESTADOS PARA TESTE DE CONEXÃO ---
+  const [dbStatus, setDbStatus] = useState("Verificando conexão...");
+  const [statusColor, setStatusColor] = useState("#F59E0B"); // Amarelo (Carregando)
+  const [productCount, setProductCount] = useState(0);
+
+  // --- FUNÇÃO PARA BUSCAR DO BACKEND ---
+  async function checkConnection() {
+    try {
+      console.log("Tentando conectar ao backend...");
+      const response = await api.get("/products"); // Chama a rota de produtos
+      
+      setProductCount(response.data.length);
+      setDbStatus("Online e Conectado!");
+      setStatusColor("#10B981"); // Verde (Sucesso)
+      console.log("Sucesso! Produtos:", response.data);
+
+    } catch (error) {
+      console.log("Erro de conexão:", error);
+      setDbStatus("Offline / Erro de API");
+      setStatusColor("#EF4444"); // Vermelho (Erro)
+    }
+  }
+
+  // Roda assim que a tela abre
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  // URL do Avatar do Usuário
   const userAvatar = "https://api.dicebear.com/9.x/avataaars/png?seed=Joao&backgroundColor=b6e3f4";
 
   return (
@@ -28,7 +57,6 @@ export default function HomeScreen() {
 
       {/* 1. HEADER (Perfil + Notificações) */}
       <View style={styles.header}>
-        {/* Perfil */}
         <View style={styles.profileSection}>
           <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
             <Image 
@@ -43,7 +71,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* BANNER DO PLANO */}
           <TouchableOpacity 
             style={styles.planBadge}
             onPress={() => router.push("/subscription/plans")}
@@ -52,7 +79,6 @@ export default function HomeScreen() {
             <Text style={styles.planText}>START</Text>
           </TouchableOpacity>
 
-          {/* Botão Notificações */}
           <TouchableOpacity 
             style={styles.notifButton}
             onPress={() => router.push("/notifications")}
@@ -65,6 +91,32 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
+        {/* --- ÁREA DE TESTE DE CONEXÃO (Temporário) --- */}
+        <TouchableOpacity 
+          onPress={checkConnection}
+          style={{
+            backgroundColor: statusColor + '20', // Cor transparente
+            padding: 12,
+            borderRadius: 12,
+            marginBottom: 20,
+            borderWidth: 1,
+            borderColor: statusColor,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: statusColor }} />
+            <View>
+              <Text style={{ fontWeight: 'bold', color: '#333' }}>Banco de Dados (MongoDB)</Text>
+              <Text style={{ fontSize: 12, color: '#666' }}>{dbStatus}</Text>
+            </View>
+          </View>
+          <Text style={{ fontWeight: 'bold', color: statusColor }}>{productCount} Prod.</Text>
+        </TouchableOpacity>
+        {/* --------------------------------------------- */}
+
         {/* 2. AÇÕES RÁPIDAS (+ Pedido / + Cliente) */}
         <QuickActions />
 
@@ -81,11 +133,6 @@ export default function HomeScreen() {
         <PlanStatusCard />
 
       </ScrollView>
-
-      {/* O Assistente Flutuante foi removido daqui para não duplicar.
-         Ele agora aparece automaticamente através do _layout.tsx (CustomTabBar).
-      */}
-
     </View>
   );
 }
