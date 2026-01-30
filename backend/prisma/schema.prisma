@@ -1,0 +1,142 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// --- USUÁRIOS E AUTENTICAÇÃO ---
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales     Order[]
+}
+
+enum Role {
+  OWNER
+  SELLER
+}
+
+// --- PRODUTOS E ESTOQUE ---
+model Product {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  sku         String?  @unique
+  imageUrl    String?
+  
+  // MongoDB usa Float no lugar de Decimal
+  costPrice   Float    @default(0) 
+  salePrice   Float    @default(0) 
+  stock       Int      @default(0)
+  minStock    Int      @default(3)
+  
+  category    String?
+  brand       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+// --- CLIENTES (CRM) ---
+model Client {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  phone     String?
+  email     String?
+  cpf       String?
+  address   String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+}
+
+// --- VENDAS E PEDIDOS (PDV) ---
+model Order {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  code        Int         
+  status      OrderStatus @default(OPEN)
+  total       Float       @default(0)
+  discount    Float       @default(0)
+  paymentType PaymentType @default(PIX)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  clientId    String?     @db.ObjectId
+  client      Client?     @relation(fields: [clientId], references: [id])
+  
+  sellerId    String      @db.ObjectId
+  seller      User        @relation(fields: [sellerId], references: [id])
+
+  items       OrderItem[]
+  tradeIn     TradeIn?
+}
+
+enum OrderStatus {
+  OPEN
+  WAITING_PAYMENT
+  PAID
+  CANCELED
+  IN_SERVICE
+  READY
+}
+
+enum PaymentType {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  SPLIT
+}
+
+// --- ITENS DO PEDIDO ---
+model OrderItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  quantity  Int
+  price     Float
+  
+  orderId   String  @db.ObjectId
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// --- TRADE-IN ---
+model TradeIn {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  model         String
+  imei          String?
+  condition     String
+  purchasePrice Float
+  
+  orderId       String   @unique @db.ObjectId
+  order         Order    @relation(fields: [orderId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
+
+// --- MARKETING IA ---
+model MarketingContent {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  productName   String
+  generatedText String
+  platform      String
+  createdAt     DateTime @default(now())
+}
