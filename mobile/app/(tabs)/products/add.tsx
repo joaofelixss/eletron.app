@@ -1,21 +1,23 @@
 import React, { useState } from "react";
 import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StatusBar, 
-  ScrollView, 
-  Image,
-  Alert
+  View, Text, TextInput, TouchableOpacity, StatusBar, 
+  ScrollView, Image, Alert, ActivityIndicator 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { colors } from "../../../src/constants/colors";
-import { styles } from "./product-form.styles"; // Reutilizando estilos
+import { styles } from "./product-form.styles"; 
+import { api } from "../../../src/services/api";
+
+// 1. IMPORTAR O NOVO MODAL
+import { SuccessModal } from "../../../src/components/SuccessModal";
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  
+  // 2. NOVO ESTADO PARA O MODAL
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -28,18 +30,45 @@ export default function AddProductScreen() {
     image: null as string | null
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.price) {
-      Alert.alert("Erro", "Nome e Preço são obrigatórios.");
+      Alert.alert("Atenção", "Nome e Preço de Venda são obrigatórios.");
       return;
     }
-    Alert.alert("Sucesso", "Produto cadastrado!", [
-        { text: "OK", onPress: () => router.back() }
-    ]);
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        name: form.name,
+        description: form.variant ? `${form.description} \nVariante: ${form.variant}` : form.description, 
+        sku: form.sku || undefined,
+        salePrice: parseFloat(form.price.replace(',', '.')) || 0,
+        costPrice: parseFloat(form.cost.replace(',', '.')) || 0,
+        stock: parseInt(form.stock) || 0,
+        imageUrl: form.image 
+      };
+
+      await api.post("/products", payload);
+
+      // 3. AQUI ESTÁ A MUDANÇA: Em vez de Alert, exibimos o Modal
+      setShowSuccess(true);
+
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      Alert.alert("Erro", "Não foi possível salvar o produto.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Função que roda quando clica no botão do Modal
+  const handleCloseSuccess = () => {
+    setShowSuccess(false);
+    router.back(); // Volta para a tela anterior
   };
 
   const handleScan = () => {
-      // Simulação de Scan
       Alert.alert("Scanner", "Código de barras lido: 789102030");
       setForm({...form, sku: "789102030"});
   };
@@ -48,7 +77,15 @@ export default function AddProductScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* HEADER */}
+      {/* --- INSERIR O MODAL AQUI (Pode ser em qualquer lugar dentro da View) --- */}
+      <SuccessModal 
+        visible={showSuccess} 
+        onClose={handleCloseSuccess}
+        title="Produto Cadastrado!"
+        message={`O produto "${form.name}" foi salvo no estoque e já está disponível para venda.`}
+      />
+      {/* ----------------------------------------------------------------------- */}
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
@@ -58,6 +95,7 @@ export default function AddProductScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* ... (Todo o resto do seu formulário continua IGUAL) ... */}
         
         {/* FOTO UPLOAD (Placeholder) */}
         <TouchableOpacity style={styles.imageContainer}>
@@ -112,7 +150,7 @@ export default function AddProductScreen() {
                     <Text style={styles.label}>Preço Venda *</Text>
                     <TextInput 
                         style={styles.input} 
-                        placeholder="R$ 0,00"
+                        placeholder="0.00"
                         keyboardType="numeric"
                         value={form.price}
                         onChangeText={(t) => setForm({...form, price: t})}
@@ -122,7 +160,7 @@ export default function AddProductScreen() {
                     <Text style={styles.label}>Custo</Text>
                     <TextInput 
                         style={styles.input} 
-                        placeholder="R$ 0,00"
+                        placeholder="0.00"
                         keyboardType="numeric"
                         value={form.cost}
                         onChangeText={(t) => setForm({...form, cost: t})}
@@ -169,9 +207,19 @@ export default function AddProductScreen() {
 
       {/* FOOTER */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-            <Text style={styles.actionText}>Cadastrar Produto</Text>
+        <TouchableOpacity 
+          style={[styles.actionButton, { opacity: loading ? 0.7 : 1 }]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+            {loading ? (
+               <ActivityIndicator color="#FFF" />
+            ) : (
+               <>
+                 <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                 <Text style={styles.actionText}>Cadastrar Produto</Text>
+               </>
+            )}
         </TouchableOpacity>
       </View>
 
