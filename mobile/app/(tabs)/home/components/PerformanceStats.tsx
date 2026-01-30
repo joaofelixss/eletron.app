@@ -1,8 +1,12 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import React, { useState, useCallback, useMemo } from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router"; // <--- IMPORTANTE
+import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../../src/constants/colors";
+import { styles } from "./PerformanceStats.styles"; // Importando o CSS separado
+
+// API
+import { api } from "../../../../src/services/api";
 
 const StatRow = ({ icon, label, value, trend, color }: any) => (
   <View style={styles.statRow}>
@@ -17,11 +21,11 @@ const StatRow = ({ icon, label, value, trend, color }: any) => (
       <Text style={styles.statValue}>{value}</Text>
       <View style={styles.trendBox}>
         <Ionicons 
-            name={trend > 0 ? "caret-up" : "caret-down"} 
+            name={trend >= 0 ? "caret-up" : "caret-down"} 
             size={10} 
-            color={trend > 0 ? colors.success : colors.danger} 
+            color={trend >= 0 ? colors.success : colors.danger} 
         />
-        <Text style={[styles.trend, { color: trend > 0 ? colors.success : colors.danger }]}>
+        <Text style={[styles.trend, { color: trend >= 0 ? colors.success : colors.danger }]}>
           {Math.abs(trend)}%
         </Text>
       </View>
@@ -30,8 +34,66 @@ const StatRow = ({ icon, label, value, trend, color }: any) => (
 );
 
 export const PerformanceStats = () => {
-  const router = useRouter(); // <--- INICIALIZANDO O ROUTER
+  const router = useRouter();
   const [period, setPeriod] = useState("Hoje");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- BUSCAR DADOS DE VENDAS ---
+  const fetchSalesData = async () => {
+    try {
+      const response = await api.get('/orders');
+      setOrders(response.data);
+    } catch (error) {
+      console.log("Erro stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSalesData();
+    }, [])
+  );
+
+  // --- CÁLCULOS DINÂMICOS ---
+  const stats = useMemo(() => {
+    const now = new Date();
+    
+    // Filtrar pedidos pela data selecionada
+    const filteredOrders = orders.filter((o: any) => {
+        const orderDate = new Date(o.createdAt);
+        
+        if (period === "Hoje") {
+            return orderDate.toDateString() === now.toDateString();
+        }
+        if (period === "7d") {
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            return orderDate >= sevenDaysAgo;
+        }
+        if (period === "30d") {
+            const thirtyDaysAgo = new Date(now);
+            thirtyDaysAgo.setDate(now.getDate() - 30);
+            return orderDate >= thirtyDaysAgo;
+        }
+        return true;
+    });
+
+    // Calcular Métricas
+    const revenue = filteredOrders.reduce((acc, o) => acc + Number(o.total), 0);
+    const count = filteredOrders.length;
+    
+    // Ticket Médio
+    const avgTicket = count > 0 ? revenue / count : 0;
+
+    // Simulação de Lucro (Ex: 30% de margem fixa por enquanto)
+    const estimatedProfit = revenue * 0.30; 
+
+    return { revenue, count, avgTicket, estimatedProfit };
+  }, [orders, period]);
+
 
   return (
     <View style={styles.container}>
@@ -53,11 +115,19 @@ export const PerformanceStats = () => {
 
       <View style={styles.card}>
         
-        {/* HERO SECTION (LUCRO) */}
+        {/* HERO SECTION (RECEITA) */}
         <View style={styles.heroSection}>
             <View>
-                <Text style={styles.heroLabel}>Lucro Líquido</Text>
-                <Text style={styles.heroValue}>R$ 890,00</Text>
+                <Text style={styles.heroLabel}>
+                    {period === "Hoje" ? "Vendas de Hoje" : `Vendas (${period})`}
+                </Text>
+                {loading ? (
+                    <ActivityIndicator color={colors.primary} style={{ marginTop: 5, alignSelf: 'flex-start' }} />
+                ) : (
+                    <Text style={styles.heroValue}>
+                        {stats.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </Text>
+                )}
             </View>
             <View style={styles.heroBadge}>
                 <Ionicons name="trending-up" size={16} color="#15803d" />
@@ -65,14 +135,14 @@ export const PerformanceStats = () => {
             </View>
         </View>
 
-        {/* Barra de Meta */}
+        {/* Barra de Meta (Fixa por enquanto) */}
         <View style={styles.goalContainer}>
             <View style={styles.goalHeader}>
-                <Text style={styles.goalLabel}>Meta Diária</Text>
-                <Text style={styles.goalValue}>89%</Text>
+                <Text style={styles.goalLabel}>Meta do Período</Text>
+                <Text style={styles.goalValue}>65%</Text>
             </View>
             <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, { width: "89%" }]} />
+                <View style={[styles.progressBarFill, { width: "65%" }]} />
             </View>
         </View>
 
@@ -82,210 +152,36 @@ export const PerformanceStats = () => {
         <View style={styles.statsList}>
             <StatRow 
                 icon="cart" 
-                label="Pedidos" 
-                value="12" 
-                trend={5} 
+                label="Pedidos Realizados" 
+                value={stats.count.toString()} 
+                trend={10} 
                 color="#3B82F6" 
             />
             <StatRow 
                 icon="cash" 
-                label="Receita Bruta" 
-                value="R$ 1.240" 
-                trend={12} 
-                color="#F59E0B" 
+                label="Lucro Estimado (30%)" 
+                value={stats.estimatedProfit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} 
+                trend={5} 
+                color="#10B981" 
             />
             <StatRow 
-                icon="eye" 
-                label="Visitas Loja" 
-                value="45" 
+                icon="pricetag" 
+                label="Ticket Médio" 
+                value={stats.avgTicket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} 
                 trend={-2} 
                 color="#8B5CF6" 
             />
         </View>
 
-        {/* FOOTER ACTION (ATUALIZADO) */}
+        {/* FOOTER ACTION */}
         <TouchableOpacity 
           style={styles.linkButton}
-          onPress={() => router.push("/analytics")} // <--- NAVEGAÇÃO AQUI
+          onPress={() => router.push("/(tabs)/analytics")}
         >
-          <Text style={styles.linkText}>Ver Relatório Detalhado</Text>
+          <Text style={styles.linkText}>Ver Relatório Completo</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.text.main} />
         </TouchableOpacity>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { marginBottom: 24 },
-  
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  title: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 16,
-    color: colors.text.main,
-  },
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    padding: 2,
-  },
-  tab: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tabText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  activeTabText: {
-    color: "#000",
-    fontFamily: "Poppins_600SemiBold",
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  heroSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  heroLabel: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  heroValue: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 28,
-    color: colors.text.main,
-    marginTop: -4,
-  },
-  heroBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  heroBadgeText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 12,
-    color: "#15803d",
-  },
-  goalContainer: {
-    marginBottom: 16,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  goalLabel: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  goalValue: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 11,
-    color: colors.primary,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginBottom: 16,
-  },
-  statsList: {
-    gap: 16,
-  },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  rowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statLabel: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 13,
-    color: colors.text.body,
-  },
-  statValue: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 14,
-    color: colors.text.main,
-  },
-  trendBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  trend: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 10,
-  },
-  linkButton: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  linkText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 12,
-    color: colors.text.main,
-  },
-});

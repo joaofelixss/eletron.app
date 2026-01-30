@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -6,123 +6,122 @@ import {
   TouchableOpacity, 
   StatusBar, 
   ScrollView, 
-  FlatList 
+  FlatList,
+  ActivityIndicator,
+  RefreshControl
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./orders.styles";
 
-// Dados Mockados
-const MOCK_ORDERS = [
-  {
-    id: "9281",
-    client: "Carlos Silva",
-    device: "iPhone 13 - Troca de Tela",
-    date: "24/10 • 14:30",
-    price: 850.00,
-    status: "analysis",
-    icon: "phone-portrait-outline"
-  },
-  {
-    id: "9282",
-    client: "Mariana Souza",
-    device: "Macbook Air M1 - Limpeza",
-    date: "23/10 • 09:15",
-    price: 350.00,
-    status: "waiting_parts",
-    icon: "laptop-outline"
-  },
-  {
-    id: "9275",
-    client: "Roberto Almeida",
-    device: "Samsung Tab S7 - Bateria",
-    date: "22/10 • 18:00",
-    price: 420.00,
-    status: "ready",
-    icon: "tablet-portrait-outline"
-  },
-  {
-    id: "9283",
-    client: "Ana Clara",
-    device: "PS5 - HDMI Quebrado",
-    date: "Hoje • 08:00",
-    price: 0, 
-    status: "open",
-    icon: "game-controller-outline"
-  }
-];
+// 1. IMPORTAR API
+import { api } from "../../../src/services/api";
 
-// Configuração Visual dos Status
+// Configuração Visual dos Status (Mantive sua lógica bonita)
 const STATUS_CONFIG: any = {
-  analysis: { 
-    label: "Em Análise", 
-    color: "#B45309", // Texto
-    bg: "#FEF3C7",    // Fundo Amarelo Claro
-    dot: "#F59E0B"    // Bolinha
-  },
-  waiting_parts: { 
-    label: "Aguardando Peça", 
-    color: "#B91C1C", 
-    bg: "#FEE2E2", // Vermelho Claro
-    dot: "#EF4444" 
-  },
-  ready: { 
-    label: "Pronto para Retirar", 
+  PAID: { 
+    label: "Pago", 
     color: "#15803d", 
-    bg: "#DCFCE7", // Verde Claro
+    bg: "#DCFCE7", 
     dot: "#22C55E" 
   },
-  open: { 
-    label: "Em Aberto", 
-    color: "#374151", 
-    bg: "#F3F4F6", // Cinza
-    dot: "#9CA3AF" 
+  OPEN: { 
+    label: "Aberto", 
+    color: "#B45309",
+    bg: "#FEF3C7", 
+    dot: "#F59E0B" 
+  },
+  CANCELED: { 
+    label: "Cancelado", 
+    color: "#B91C1C", 
+    bg: "#FEE2E2", 
+    dot: "#EF4444" 
   }
 };
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState("Todos");
+  
+  // ESTADOS REAIS
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("Todos");
 
-  const filteredOrders = MOCK_ORDERS.filter(o => {
-      // Filtro de Texto
-      const matchesSearch = o.client.toLowerCase().includes(search.toLowerCase()) || 
-                            o.id.includes(search);
+  // --- BUSCAR PEDIDOS ---
+  async function fetchOrders() {
+    try {
+      if (!refreshing) setLoading(true);
+      const response = await api.get('/orders');
+      setOrders(response.data);
+    } catch (error) {
+      console.log("Erro ao buscar pedidos:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [])
+  );
+
+  // --- FILTROS ---
+  const filteredOrders = orders.filter((o: any) => {
+      // Filtro de Texto (Busca por Nome Cliente ou Código do Pedido)
+      const clientName = o.client?.name || "Consumidor Final";
+      const matchesSearch = clientName.toLowerCase().includes(search.toLowerCase()) || 
+                            String(o.code).includes(search);
       
       // Filtro de Tab
       if (activeFilter === "Todos") return matchesSearch;
-      if (activeFilter === "Em Aberto") return matchesSearch && o.status === "open";
-      if (activeFilter === "Em Análise") return matchesSearch && o.status === "analysis";
-      if (activeFilter === "Prontos") return matchesSearch && o.status === "ready";
+      if (activeFilter === "Pagos") return matchesSearch && o.status === "PAID";
+      if (activeFilter === "Abertos") return matchesSearch && o.status === "OPEN";
       
       return matchesSearch;
   });
 
   const renderOrderItem = ({ item }: any) => {
-    const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.open;
+    // Definir Status
+    const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.OPEN;
     
+    // Nome do Cliente
+    const clientName = item.client?.name || "Consumidor Final";
+
+    // Resumo dos Itens (Ex: "iPhone 13 + 2 outros")
+    const firstItem = item.items?.[0]?.name || "Produto Diversos";
+    const moreItems = item.items?.length > 1 ? `+ ${item.items.length - 1} outros` : "";
+    const description = `${firstItem} ${moreItems}`;
+
+    // Data Formatada
+    const date = new Date(item.createdAt).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
+
     return (
       <TouchableOpacity 
          style={styles.orderCard} 
          activeOpacity={0.7}
-         onPress={() => router.push(`/orders/${item.id}` as any)} // Futura tela de detalhes
+         onPress={() => router.push(`/orders/${item.id}`)}
       >
         {/* Header do Card */}
         <View style={styles.cardHeader}>
-          <Text style={styles.osNumber}>OS #{item.id}</Text>
-          <Text style={styles.osDate}>{item.date}</Text>
+          <Text style={styles.osNumber}>Pedido #{item.code}</Text>
+          <Text style={styles.osDate}>{date}</Text>
         </View>
 
         {/* Corpo do Card */}
         <View style={styles.cardBody}>
           <View style={styles.deviceIconBox}>
-             <Ionicons name={item.icon as any} size={24} color="#374151" />
+             <Ionicons name="receipt-outline" size={24} color="#374151" />
           </View>
           <View>
-            <Text style={styles.clientName}>{item.client}</Text>
-            <Text style={styles.deviceInfo}>{item.device}</Text>
+            <Text style={styles.clientName}>{clientName}</Text>
+            <Text style={styles.deviceInfo}>{description}</Text>
           </View>
         </View>
 
@@ -133,10 +132,8 @@ export default function OrdersScreen() {
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
           
-          <Text style={[styles.priceText, item.price === 0 && { color: "#9CA3AF", fontSize: 13, fontWeight: "500" }]}>
-            {item.price > 0 
-              ? item.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) 
-              : "Orçamento Pendente"}
+          <Text style={styles.priceText}>
+            {Number(item.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           </Text>
         </View>
       </TouchableOpacity>
@@ -150,9 +147,9 @@ export default function OrdersScreen() {
       {/* HEADER */}
       <View style={styles.header}>
         <View style={{ width: 40 }} /> 
-        <Text style={styles.headerTitle}>Minhas Ordens</Text>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="filter" size={20} color="#374151" />
+        <Text style={styles.headerTitle}>Minhas Vendas</Text>
+        <TouchableOpacity style={styles.notificationButton} onPress={fetchOrders}>
+          <Ionicons name="reload" size={20} color="#374151" />
         </TouchableOpacity>
       </View>
 
@@ -162,10 +159,11 @@ export default function OrdersScreen() {
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput 
             style={styles.searchInput}
-            placeholder="Buscar por cliente, OS ou aparelho..."
+            placeholder="Buscar por cliente ou nº pedido..."
             placeholderTextColor="#9CA3AF"
             value={search}
             onChangeText={setSearch}
+            keyboardType="default"
           />
         </View>
       </View>
@@ -173,7 +171,7 @@ export default function OrdersScreen() {
       {/* FILTERS */}
       <View style={styles.filtersContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-          {["Todos", "Em Aberto", "Em Análise", "Prontos"].map((filter) => (
+          {["Todos", "Pagos", "Abertos"].map((filter) => (
             <TouchableOpacity 
               key={filter}
               style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
@@ -188,28 +186,41 @@ export default function OrdersScreen() {
       </View>
 
       {/* LISTA */}
-      <FlatList
-        data={filteredOrders}
-        keyExtractor={(item) => item.id}
-        renderItem={renderOrderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-            <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Ionicons name="clipboard-outline" size={48} color="#D1D5DB" />
-                <Text style={{ marginTop: 12, color: "#9CA3AF" }}>Nenhum pedido encontrado.</Text>
-            </View>
-        }
-      />
+      {loading && !refreshing ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 10, color: '#9CA3AF' }}>Carregando vendas...</Text>
+          </View>
+      ) : (
+          <FlatList
+            data={filteredOrders}
+            keyExtractor={(item: any) => item.id}
+            renderItem={renderOrderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={() => {
+                    setRefreshing(true);
+                    fetchOrders();
+                }} />
+            }
+            ListEmptyComponent={
+                <View style={{ alignItems: 'center', marginTop: 50 }}>
+                    <Ionicons name="cart-outline" size={48} color="#D1D5DB" />
+                    <Text style={{ marginTop: 12, color: "#9CA3AF" }}>Nenhuma venda encontrada.</Text>
+                </View>
+            }
+          />
+      )}
 
-      {/* FAB Expandido (Texto + Ícone) */}
+      {/* FAB Expandido */}
       <TouchableOpacity 
         style={styles.fab} 
         activeOpacity={0.8}
-        onPress={() => router.push("/sales/create")} // Rota para criar
+        onPress={() => router.push("/sales/create")} 
       >
         <Ionicons name="add" size={24} color="#000" />
-        <Text style={styles.fabText}>Nova OS</Text>
+        <Text style={styles.fabText}>Nova Venda</Text>
       </TouchableOpacity>
 
     </View>

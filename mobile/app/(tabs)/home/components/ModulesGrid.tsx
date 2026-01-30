@@ -1,16 +1,19 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../../src/constants/colors";
 
-const ModuleItem = ({ icon, label, onPress, color, stat, isAlert }: any) => (
+// IMPORTAR API
+import { api } from "../../../../src/services/api";
+
+const ModuleItem = ({ icon, label, onPress, color, stat, isAlert, loading }: any) => (
   <TouchableOpacity 
     style={styles.card} 
     onPress={onPress}
     activeOpacity={0.7}
   >
-    {/* CONTEÚDO SUPERIOR (Ícone e Label) - Com Padding */}
+    {/* CONTEÚDO SUPERIOR */}
     <View style={styles.topContent}>
       <View style={[styles.iconBox, { backgroundColor: color + "15" }]}>
         <Ionicons name={icon} size={24} color={color} />
@@ -18,22 +21,74 @@ const ModuleItem = ({ icon, label, onPress, color, stat, isAlert }: any) => (
       <Text style={styles.label}>{label}</Text>
     </View>
 
-    {/* BARRA INFERIOR (Full Width) - Sem Padding lateral */}
-    {stat && (
-      <View style={[
+    {/* BARRA INFERIOR */}
+    <View style={[
         styles.statBar,
-        isAlert && styles.statBarAlert // Muda cor se for alerta
-      ]}>
-        <Text style={styles.statText} numberOfLines={1}>
-          {stat}
+        isAlert && styles.statBarAlert 
+    ]}>
+      {loading ? (
+        <ActivityIndicator size="small" color={isAlert ? "#991B1B" : "#000"} />
+      ) : (
+        <Text style={[styles.statText, isAlert && { color: "#991B1B" }]} numberOfLines={1}>
+            {stat || "---"}
         </Text>
-      </View>
-    )}
+      )}
+    </View>
   </TouchableOpacity>
 );
 
 export const ModulesGrid = () => {
   const router = useRouter();
+
+  // --- ESTADOS DO DASHBOARD ---
+  const [stats, setStats] = useState({
+    products: 0,
+    lowStock: 0,
+    openOrders: 0,
+    clients: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  // --- BUSCAR DADOS REAIS ---
+  const fetchDashboardData = async () => {
+    try {
+      // Fazemos as 3 requisições ao mesmo tempo para ser rápido
+      const [productsRes, ordersRes, clientsRes] = await Promise.all([
+        api.get('/products'),
+        api.get('/orders'),
+        api.get('/clients')
+      ]);
+
+      const products = productsRes.data;
+      const orders = ordersRes.data;
+      const clients = clientsRes.data;
+
+      // Calcular Estoque Baixo (Menor ou igual a 3)
+      const lowStockCount = products.filter((p: any) => p.stock <= 3).length;
+
+      // Calcular Pedidos em Aberto (Status OPEN)
+      const openOrdersCount = orders.filter((o: any) => o.status === 'OPEN').length;
+
+      setStats({
+        products: products.length,
+        lowStock: lowStockCount,
+        openOrders: openOrdersCount,
+        clients: clients.length
+      });
+
+    } catch (error) {
+      console.log("Erro ao carregar dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Atualiza sempre que a tela ganha foco (Volta pra Home)
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -42,22 +97,26 @@ export const ModulesGrid = () => {
         <ModuleItem 
           icon="cube-outline" 
           label="Produtos" 
-          stat="54 un."
+          stat={`${stats.products} un.`}
+          loading={loading}
           onPress={() => router.push("/(tabs)/products")}
           color="#3B82F6" 
         />
         <ModuleItem 
           icon="layers-outline" 
           label="Estoque" 
-          stat="3 Baixos" 
-          isAlert // Fundo vermelho claro
+          stat={stats.lowStock > 0 ? `${stats.lowStock} Baixos` : "Ok"} 
+          isAlert={stats.lowStock > 0} // Fica vermelho se tiver estoque baixo
+          loading={loading}
           onPress={() => router.push("/(tabs)/products/inventory")}
           color="#10B981" 
         />
         <ModuleItem 
           icon="receipt-outline" 
           label="Pedidos" 
-          stat="2 Novos"
+          stat={`${stats.openOrders} Abertos`}
+          isAlert={stats.openOrders > 0}
+          loading={loading}
           onPress={() => router.push("/(tabs)/orders")}
           color="#F59E0B" 
         />
@@ -68,22 +127,24 @@ export const ModulesGrid = () => {
         <ModuleItem 
           icon="people-outline" 
           label="Clientes" 
-          stat="128"
-          onPress={() => router.push("/clients")}
+          stat={stats.clients}
+          loading={loading}
+          onPress={() => router.push("/(tabs)/clients")}
           color="#8B5CF6" 
         />
+        
+        {/* Módulos Futuros (Ainda Mockados por enquanto) */}
         <ModuleItem 
           icon="storefront-outline" 
           label="Loja" 
-          stat="15 Visitas"
-          onPress={() => router.push("/catalog")}
+          stat="Em Breve"
+          onPress={() => router.push("/(tabs)/marketing")} // Ajustei rota
           color="#EC4899" 
         />
         <ModuleItem 
           icon="chatbubbles-outline" 
           label="Chat IA" 
-          stat="1 Msg"
-          isAlert
+          stat="Off"
           onPress={() => router.push("/(tabs)/chat")}
           color="#6366F1" 
         />
@@ -108,29 +169,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     minHeight: 125,
-    
-    // IMPORTANTE PARA O FULL WIDTH
-    padding: 0, // Removemos o padding global do card
-    overflow: "hidden", // Garante que a barra siga a curva da borda
-    justifyContent: "space-between", // Empurra a barra para o final
-    
-    // Sombra
+    padding: 0, 
+    overflow: "hidden", 
+    justifyContent: "space-between", 
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
     shadowRadius: 6,
     elevation: 2,
   },
-  
-  // Container para o Ícone e Texto (Que precisa de padding interno)
   topContent: {
-    flex: 1, // Ocupa o espaço que sobra acima da barra
+    flex: 1, 
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 12, // Padding só em cima
+    paddingTop: 12, 
     paddingHorizontal: 4,
   },
-
   iconBox: {
     width: 44,
     height: 44,
@@ -139,33 +193,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  
   label: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 13,
     color: colors.text.main,
     textAlign: "center",
-    marginBottom: 8, // Espaço antes da barra amarela
+    marginBottom: 8, 
   },
-  
-  // A BARRA INFERIOR (FULL WIDTH)
   statBar: {
-    width: "100%", // Pega de ponta a ponta
-    backgroundColor: colors.primary, // Amarelo
-    paddingVertical: 6, // Altura da barra
+    width: "100%", 
+    backgroundColor: colors.primary, 
+    paddingVertical: 6, 
     alignItems: "center",
     justifyContent: "center",
   },
-  
   statBarAlert: {
-    backgroundColor: "#FECACA", // Vermelho claro se for alerta
+    backgroundColor: "#FEE2E2", // Vermelho claro
   },
-
   statText: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 10,
     color: "#000000",
-    textTransform: "uppercase", // Fica mais elegante em barras
+    textTransform: "uppercase", 
     letterSpacing: 0.5,
   },
 });

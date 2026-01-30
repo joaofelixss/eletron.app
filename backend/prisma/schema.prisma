@@ -35,7 +35,6 @@ model Product {
   sku         String?  @unique
   imageUrl    String?
   
-  // MongoDB usa Float no lugar de Decimal
   costPrice   Float    @default(0) 
   salePrice   Float    @default(0) 
   stock       Int      @default(0)
@@ -69,7 +68,7 @@ model Client {
 // --- VENDAS E PEDIDOS (PDV) ---
 model Order {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  code        Int         
+  code        Int         @default(0) // Ajuste temporário
   status      OrderStatus @default(OPEN)
   total       Float       @default(0)
   discount    Float       @default(0)
@@ -81,8 +80,9 @@ model Order {
   clientId    String?     @db.ObjectId
   client      Client?     @relation(fields: [clientId], references: [id])
   
-  sellerId    String      @db.ObjectId
-  seller      User        @relation(fields: [sellerId], references: [id])
+  // Vendedor Opcional por enquanto (até termos Login)
+  sellerId    String?     @db.ObjectId
+  seller      User?       @relation(fields: [sellerId], references: [id])
 
   items       OrderItem[]
   tradeIn     TradeIn?
@@ -109,7 +109,8 @@ enum PaymentType {
 model OrderItem {
   id        String  @id @default(auto()) @map("_id") @db.ObjectId
   quantity  Int
-  price     Float
+  price     Float   // Preço unitário no momento da venda
+  name      String  // Nome do produto (para histórico)
   
   orderId   String  @db.ObjectId
   order     Order   @relation(fields: [orderId], references: [id])

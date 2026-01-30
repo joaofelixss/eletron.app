@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   View, 
   Text, 
@@ -7,7 +7,8 @@ import {
   ScrollView, 
   Image,
   Alert,
-  Share
+  Share,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -16,24 +17,80 @@ import { colors } from "../../../src/constants/colors";
 // IMPORTANDO OS ESTILOS
 import { styles } from "./analytics.styles";
 
+// API
+import { api } from "../../../src/services/api";
+
 export default function AnalyticsScreen() {
   const router = useRouter();
-  const [period, setPeriod] = useState("30d");
+  const [period, setPeriod] = useState("30 dias");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock Data
-  const reportData = {
-    revenue: "R$ 12.450,00",
-    expenses: "R$ 8.250,00",
-    profit: "R$ 4.200,00",
-    margin: "33%",
-    orders: 142,
-    ticket: "R$ 87,00"
-  };
+  // --- 1. BUSCAR DADOS REAIS ---
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await api.get('/orders');
+        setOrders(response.data);
+      } catch (error) {
+        console.log("Erro analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
+  // --- 2. CÁLCULOS (Engine de Dados) ---
+  const reportData = useMemo(() => {
+    const now = new Date();
+    
+    // Filtrar Pedidos pela Data
+    const filtered = orders.filter(o => {
+        const d = new Date(o.createdAt);
+        if (period === "Hoje") return d.toDateString() === now.toDateString();
+        if (period === "7 dias") {
+            const date7 = new Date(); date7.setDate(now.getDate() - 7);
+            return d >= date7;
+        }
+        if (period === "30 dias") {
+            const date30 = new Date(); date30.setDate(now.getDate() - 30);
+            return d >= date30;
+        }
+        if (period === "Mês Atual") {
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }
+        return true;
+    });
+
+    // Somatórios
+    const revenue = filtered.reduce((acc, o) => acc + Number(o.total), 0);
+    const count = filtered.length;
+    
+    // Simulação de Custos e Lucros (Baseado em margem média de 30% de lucro líquido)
+    // No futuro, podemos pegar o custo real do produto no banco.
+    const profitMargin = 0.33; // 33%
+    const profit = revenue * profitMargin;
+    const expenses = revenue - profit;
+    const ticket = count > 0 ? revenue / count : 0;
+
+    return {
+        revenueRaw: revenue,
+        revenue: revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+        expenses: expenses.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+        profit: profit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+        margin: "33%",
+        orders: count,
+        ticket: ticket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+        growth: "+12%" // Mock de crescimento (comparativo complexo fica pra v2)
+    };
+  }, [orders, period]);
+
+  // --- AÇÕES ---
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Relatório Financeiro Eletron - Lucro Líquido: ${reportData.profit}`,
+        message: `📊 *Relatório Eletron (${period})*\n\nReceita: ${reportData.revenue}\nLucro Líquido: ${reportData.profit}\nPedidos: ${reportData.orders}`,
       });
     } catch (error) {
       Alert.alert("Erro ao compartilhar");
@@ -41,8 +98,16 @@ export default function AnalyticsScreen() {
   };
 
   const handlePDF = () => {
-    Alert.alert("Gerando PDF...", "O arquivo 'Relatorio_Jan_2026.pdf' foi salvo nos seus documentos.");
+    Alert.alert("Gerando PDF...", `Relatório financeiro de ${period} enviado para impressão.`);
   };
+
+  if (loading) {
+      return (
+          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+      );
+  }
 
   return (
     <View style={styles.container}>
@@ -81,11 +146,14 @@ export default function AnalyticsScreen() {
             />
             <View>
               <Text style={styles.aiTitle}>Análise do Glauber</Text>
-              <Text style={styles.aiDate}>Atualizado agora</Text>
+              <Text style={styles.aiDate}>Baseado em {reportData.orders} vendas</Text>
             </View>
           </View>
           <Text style={styles.aiText}>
-            Parabéns! Seu lucro subiu <Text style={{fontWeight: 'bold', color: colors.success}}>12%</Text> em relação ao mês passado. O destaque foi a venda de acessórios, que teve margem de 60%.
+            {reportData.revenueRaw > 0 
+                ? `O fluxo está ótimo! Você faturou ${reportData.revenue} neste período. A margem de lucro se mantém saudável em torno de 33%.`
+                : "Ainda não temos dados suficientes neste período para uma análise detalhada. Tente mudar o filtro."
+            }
           </Text>
         </View>
 
@@ -97,9 +165,9 @@ export default function AnalyticsScreen() {
               <View style={[styles.iconBox, { backgroundColor: "#DCFCE7" }]}>
                 <Ionicons name="trending-up" size={20} color={colors.success} />
               </View>
-              <Text style={[styles.trendText, { color: colors.success }]}>+12%</Text>
+              <Text style={[styles.trendText, { color: colors.success }]}>{reportData.growth}</Text>
             </View>
-            <Text style={styles.cardLabel}>Lucro Líquido</Text>
+            <Text style={styles.cardLabel}>Lucro Líquido (Est.)</Text>
             <Text style={styles.cardValue}>{reportData.profit}</Text>
           </View>
 
@@ -109,60 +177,20 @@ export default function AnalyticsScreen() {
               <Text style={styles.cardLabelSmall}>Receita</Text>
               <Text style={styles.cardValueSmall}>{reportData.revenue}</Text>
               <View style={styles.barContainer}>
-                 <View style={[styles.barFill, { width: '100%', backgroundColor: '#3B82F6' }]} />
+                  <View style={[styles.barFill, { width: '100%', backgroundColor: '#3B82F6' }]} />
               </View>
             </View>
             <View style={styles.card}>
-              <Text style={styles.cardLabelSmall}>Despesas</Text>
+              <Text style={styles.cardLabelSmall}>Despesas (Est.)</Text>
               <Text style={styles.cardValueSmall}>{reportData.expenses}</Text>
               <View style={styles.barContainer}>
-                 <View style={[styles.barFill, { width: '65%', backgroundColor: colors.danger }]} />
+                  <View style={[styles.barFill, { width: '67%', backgroundColor: colors.danger }]} />
               </View>
             </View>
           </View>
         </View>
 
-        {/* 3. DETALHAMENTO DE CUSTOS */}
-        <Text style={styles.sectionTitle}>Entradas vs Saídas</Text>
-        <View style={styles.breakdownCard}>
-          
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownLeft}>
-              <View style={[styles.dot, { backgroundColor: "#3B82F6" }]} />
-              <Text style={styles.breakdownLabel}>Vendas de Produtos</Text>
-            </View>
-            <Text style={styles.breakdownValue}>R$ 9.200,00</Text>
-          </View>
-
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownLeft}>
-              <View style={[styles.dot, { backgroundColor: "#8B5CF6" }]} />
-              <Text style={styles.breakdownLabel}>Serviços (Mão de Obra)</Text>
-            </View>
-            <Text style={styles.breakdownValue}>R$ 3.250,00</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownLeft}>
-              <View style={[styles.dot, { backgroundColor: colors.danger }]} />
-              <Text style={styles.breakdownLabel}>Compra de Peças</Text>
-            </View>
-            <Text style={styles.breakdownValue}>- R$ 5.100,00</Text>
-          </View>
-          
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownLeft}>
-              <View style={[styles.dot, { backgroundColor: "#F59E0B" }]} />
-              <Text style={styles.breakdownLabel}>Custos Fixos (Aluguel/Luz)</Text>
-            </View>
-            <Text style={styles.breakdownValue}>- R$ 3.150,00</Text>
-          </View>
-
-        </View>
-
-        {/* 4. KPI SECUNDÁRIOS */}
+        {/* 3. KPI SECUNDÁRIOS */}
         <View style={styles.kpiRow}>
           <View style={styles.kpiItem}>
             <Ionicons name="cart-outline" size={20} color="#666" />
@@ -182,9 +210,42 @@ export default function AnalyticsScreen() {
             <Text style={styles.kpiLabel}>Margem</Text>
           </View>
         </View>
+
+        {/* 4. DETALHAMENTO SIMPLIFICADO */}
+        <Text style={styles.sectionTitle}>Resumo Financeiro</Text>
+        <View style={styles.breakdownCard}>
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.dot, { backgroundColor: "#3B82F6" }]} />
+              <Text style={styles.breakdownLabel}>Vendas Totais</Text>
+            </View>
+            <Text style={styles.breakdownValue}>{reportData.revenue}</Text>
+          </View>
+
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.dot, { backgroundColor: colors.danger }]} />
+              <Text style={styles.breakdownLabel}>Custo Operacional (67%)</Text>
+            </View>
+            <Text style={styles.breakdownValue}>- {reportData.expenses}</Text>
+          </View>
+          
+          <View style={styles.divider} />
+
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.dot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.breakdownLabel, { fontWeight: 'bold' }]}>Resultado Líquido</Text>
+            </View>
+            <Text style={[styles.breakdownValue, { color: colors.success, fontWeight: 'bold' }]}>
+                {reportData.profit}
+            </Text>
+          </View>
+        </View>
+
       </ScrollView>
 
-      {/* FOOTER FIXO (Agora visível!) */}
+      {/* FOOTER FIXO */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.secondaryButton} onPress={handleShare}>
           <Ionicons name="share-social-outline" size={20} color={colors.text.main} />

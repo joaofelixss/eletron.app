@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   View, 
   Text, 
@@ -8,52 +8,106 @@ import {
   ScrollView, 
   Image,
   Alert,
-  FlatList
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { salesStyles as styles } from "./sales.styles";
 
-// Mock de Produtos
-const PRODUCTS = [
-  { id: "1", name: "iPhone 13 Pro", price: 4200, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-pro-graphite-select?wid=470&hei=556&fmt=png-alpha" },
-  { id: "2", name: "Capa MagSafe", price: 150, image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MM293?wid=572&hei=572&fmt=jpeg&qlt=95" },
-  { id: "3", name: "Película 3D", price: 50, image: null },
-  { id: "4", name: "Carregador 20W", price: 120, image: null },
-];
+// IMPORTAR API
+import { api } from "../../src/services/api";
 
 export default function CreateOrderScreen() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  
+  // --- ESTADOS ---
+  const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
-  const [selectedClient, setSelectedClient] = useState("Consumidor Final");
+  const [search, setSearch] = useState("");
+  
+  // Estados de Carregamento
+  const [loading, setLoading] = useState(true);
 
-  // Adicionar ao Carrinho
+  // 1. CARREGAR PRODUTOS
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const response = await api.get('/products');
+        setProducts(response.data);
+      } catch (error) {
+        console.log("Erro ao carregar produtos", error);
+        Alert.alert("Erro", "Falha de conexão com o servidor.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // Filtro de Produtos (Busca)
+  const filteredProducts = products.filter(p => 
+     p.name.toLowerCase().includes(search.toLowerCase()) || 
+     (p.sku && p.sku.includes(search))
+  );
+
+  // --- LÓGICA DO CARRINHO ---
+
   const addToCart = (product: any) => {
+    // Validação de Estoque
+    if (product.stock <= 0) {
+        Alert.alert("Esgotado", "Este produto não tem estoque disponível.");
+        return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
+      
       if (existing) {
+        // Verifica se tem estoque para adicionar mais um
+        if (existing.qty + 1 > product.stock) {
+            Alert.alert("Limite Atingido", `Só restam ${product.stock} unidades.`);
+            return prev;
+        }
         return prev.map(item => 
           item.id === product.id ? { ...item, qty: item.qty + 1 } : item
         );
       }
+      
+      // Adiciona novo item
       return [...prev, { ...product, qty: 1 }];
     });
   };
 
-  // Calcular Total
-  const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const removeFromCart = (productId: string) => {
+      setCart(prev => prev.reduce((acc, item) => {
+          if (item.id === productId) {
+              if (item.qty > 1) {
+                  acc.push({ ...item, qty: item.qty - 1 });
+              }
+              // Se for 1, não dá push (remove)
+          } else {
+              acc.push(item);
+          }
+          return acc;
+      }, [] as any[]));
+  };
 
-  const handleFinish = () => {
+  // Calcular Total
+  const total = cart.reduce((acc, item) => acc + (Number(item.salePrice) * item.qty), 0);
+
+  // 2. AVANÇAR PARA REVISÃO
+  const handleNextStep = () => {
     if (cart.length === 0) {
       Alert.alert("Carrinho Vazio", "Adicione produtos para continuar.");
       return;
     }
-    // Lógica de salvar...
-    Alert.alert("Pedido Criado!", `Total: R$ ${total.toFixed(2)}`, [
-        { text: "OK", onPress: () => router.push("/(tabs)/orders") }
-    ]);
+
+    // NAVEGA PARA A TELA DE REVISÃO
+    router.push({
+        pathname: "/sales/review",
+        params: { cart: JSON.stringify(cart) }
+    });
   };
 
   return (
@@ -73,19 +127,7 @@ export default function CreateOrderScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         
-        {/* 1. SELEÇÃO DE CLIENTE */}
-        <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Cliente</Text>
-            <TouchableOpacity style={styles.clientRow} onPress={() => Alert.alert("Selecionar Cliente")}>
-                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                    <Ionicons name="person-circle" size={24} color="#9CA3AF" />
-                    <Text style={styles.clientName}>{selectedClient}</Text>
-                </View>
-                <Text style={styles.changeClientText}>Alterar</Text>
-            </TouchableOpacity>
-        </View>
-
-        {/* 2. BUSCA PRODUTOS */}
+        {/* 1. BUSCA PRODUTOS */}
         <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
             <View style={{ 
                 flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', 
@@ -101,47 +143,70 @@ export default function CreateOrderScreen() {
             </View>
         </View>
 
-        {/* 3. GRID DE PRODUTOS */}
-        <View style={styles.gridContainer}>
-            {PRODUCTS.map((product) => (
-                <TouchableOpacity 
-                    key={product.id} 
-                    style={styles.productCardSmall}
-                    onPress={() => addToCart(product)}
-                >
-                    {product.image ? (
-                        <Image source={{ uri: product.image }} style={styles.prodImageSmall} />
-                    ) : (
-                        <View style={[styles.prodImageSmall, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
-                            <Ionicons name="cube-outline" size={32} color="#D1D5DB" />
+        {/* 2. GRID DE PRODUTOS */}
+        {loading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+        ) : (
+            <View style={styles.gridContainer}>
+                {filteredProducts.slice(0, 8).map((product) => (
+                    <TouchableOpacity 
+                        key={product.id} 
+                        style={[styles.productCardSmall, product.stock <= 0 && { opacity: 0.6 }]}
+                        onPress={() => addToCart(product)}
+                    >
+                        {product.imageUrl ? (
+                            <Image source={{ uri: product.imageUrl }} style={styles.prodImageSmall} />
+                        ) : (
+                            <View style={[styles.prodImageSmall, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+                                <Ionicons name="cube-outline" size={32} color="#D1D5DB" />
+                            </View>
+                        )}
+                        <Text style={styles.prodName} numberOfLines={2}>{product.name}</Text>
+                        <Text style={styles.prodPrice}>
+                            R$ {Number(product.salePrice).toFixed(2)}
+                        </Text>
+                        
+                        {/* Indicador de Estoque */}
+                        {product.stock <= 0 ? (
+                             <Text style={{ fontSize: 10, color: '#EF4444', marginTop: 2, fontWeight: 'bold' }}>ESGOTADO</Text>
+                        ) : (
+                             <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Restam: {product.stock}</Text>
+                        )}
+
+                        <View style={styles.addButtonSmall}>
+                             <Ionicons name="add" size={18} color="#000" />
                         </View>
-                    )}
-                    <Text style={styles.prodName} numberOfLines={2}>{product.name}</Text>
-                    <Text style={styles.prodPrice}>
-                        R$ {product.price.toFixed(2)}
-                    </Text>
-                    <View style={styles.addButtonSmall}>
-                        <Ionicons name="add" size={18} color="#000" />
-                    </View>
-                </TouchableOpacity>
-            ))}
-        </View>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        )}
         
-        {/* 4. LISTA DE ITENS NO CARRINHO (RESUMO) */}
+        {/* 3. LISTA DE ITENS NO CARRINHO (RESUMO) */}
         {cart.length > 0 && (
-            <View style={[styles.sectionCard, { marginTop: 12 }]}>
-                <Text style={styles.sectionTitle}>Itens no Pedido ({cart.length})</Text>
+            <View style={[styles.sectionCard, { marginTop: 12, marginBottom: 100 }]}>
+                <Text style={styles.sectionTitle}>Carrinho ({cart.reduce((acc, i) => acc + i.qty, 0)} itens)</Text>
                 {cart.map((item) => (
                     <View key={item.id} style={styles.itemRow}>
-                        <View style={styles.qtyBadge}>
-                            <Text style={styles.qtyText}>{item.qty}x</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                            {/* Botão Remover */}
+                            <TouchableOpacity onPress={() => removeFromCart(item.id)}>
+                                <Ionicons name="remove-circle-outline" size={24} color="#EF4444" />
+                            </TouchableOpacity>
+                            
+                            <View style={styles.qtyBadge}>
+                                <Text style={styles.qtyText}>{item.qty}x</Text>
+                            </View>
+                            
+                            <View style={styles.itemInfo}>
+                                <Text style={{ fontFamily: "Poppins_500Medium" }}>{item.name}</Text>
+                                <Text style={{ fontSize: 12, color: "#6B7280" }}>
+                                    Unit: R$ {Number(item.salePrice).toFixed(2)}
+                                </Text>
+                            </View>
                         </View>
-                        <View style={styles.itemInfo}>
-                            <Text style={{ fontFamily: "Poppins_500Medium" }}>{item.name}</Text>
-                            <Text style={{ fontSize: 12, color: "#6B7280" }}>Unit: R$ {item.price}</Text>
-                        </View>
+                        
                         <Text style={styles.itemPrice}>
-                            R$ {(item.price * item.qty).toFixed(2)}
+                            R$ {(Number(item.salePrice) * item.qty).toFixed(2)}
                         </Text>
                     </View>
                 ))}
@@ -153,13 +218,17 @@ export default function CreateOrderScreen() {
       {/* FOOTER FLUTUANTE */}
       <View style={styles.footer}>
         <View>
-            <Text style={styles.totalLabel}>Total a Pagar</Text>
+            <Text style={styles.totalLabel}>Total Parcial</Text>
             <Text style={styles.totalValue}>
                 {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </Text>
         </View>
-        <TouchableOpacity style={styles.checkoutButton} onPress={handleFinish}>
-            <Text style={styles.checkoutText}>Finalizar</Text>
+        <TouchableOpacity 
+            style={[styles.checkoutButton, { opacity: cart.length === 0 ? 0.5 : 1 }]} 
+            onPress={handleNextStep}
+            disabled={cart.length === 0}
+        >
+            <Text style={styles.checkoutText}>Avançar</Text>
             <Ionicons name="arrow-forward" size={18} color="#000" />
         </TouchableOpacity>
       </View>
