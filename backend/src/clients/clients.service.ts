@@ -19,6 +19,7 @@ export class ClientsService {
 
   // 2. Filtra pelo userId
   findAll(userId: string) {
+    if (!userId) return [];
     return this.prisma.client.findMany({
       where: { userId: userId },
     });

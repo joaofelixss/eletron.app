@@ -14,30 +14,48 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./products.styles";
-
-// 1. IMPORTAR A API
 import { api } from "../../../src/services/api";
+import { useAuth } from "../../../src/context/AuthContext";
+
+// --- CONFIGURAÇÃO DE IP ---
+// COLOQUE AQUI O IP DO SEU COMPUTADOR (O MESMO QUE VOCÊ USA NA API)
+const SERVER_IP = "192.168.1.9"; // <--- ⚠️ ALTERE PARA O SEU IP (veja no ipconfig)
+const SERVER_PORT = "3000";
 
 export default function ProductsScreen() {
   const router = useRouter();
+  const { user } = useAuth(); 
   
-  // --- ESTADOS REAIS ---
-  const [products, setProducts] = useState([]); // Dados do Banco
+  const [products, setProducts] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  // --- FUNÇÃO DE BUSCAR DO BACKEND ---
+  // --- CORREÇÃO DE URL DA IMAGEM ---
+  const fixImageUrl = (url: string | null) => {
+    if (!url) return null;
+
+    // Se a URL tiver 'localhost', troca pelo IP real
+    if (url.includes('localhost')) {
+      return url.replace('localhost', SERVER_IP);
+    }
+    // Se a URL vier relativa (ex: /uploads/foto.jpg), adiciona o dominio
+    if (!url.startsWith('http')) {
+        return `http://${SERVER_IP}:${SERVER_PORT}${url}`;
+    }
+    
+    return url;
+  };
+
   async function fetchProducts() {
+    if (!user?.id) return;
     try {
-      // Se não for refresh (puxar pra baixo), mostra loading tela cheia
       if (!refreshing) setLoading(true);
-      
-      const response = await api.get('/products');
+      const response = await api.get('/products', {
+        params: { userId: user.id }
+      });
       setProducts(response.data);
-      
     } catch (error) {
       console.log("Erro ao buscar produtos:", error);
     } finally {
@@ -46,24 +64,19 @@ export default function ProductsScreen() {
     }
   }
 
-  // Recarrega sempre que a tela ganha foco (ex: voltou do cadastro)
   useFocusEffect(
     useCallback(() => {
       fetchProducts();
-    }, [])
+    }, [user]) 
   );
 
-  // Lógica de Filtro Local (Busca por nome ou SKU)
   const filteredProducts = products.filter((p: any) => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     (p.sku && p.sku.includes(search))
   );
 
-  // --- COMPONENTES VISUAIS ---
-
   const ListHeader = () => (
     <View>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.inputWrapper}>
           <Ionicons name="search" size={20} color="#9CA3AF" />
@@ -74,24 +87,19 @@ export default function ProductsScreen() {
             value={search}
             onChangeText={setSearch}
           />
-          <TouchableOpacity 
-             style={styles.scanButtonSmall}
-             onPress={() => router.push("/scanner")}
-          >
+          <TouchableOpacity style={styles.scanButtonSmall} onPress={() => router.push("/scanner")}>
              <Ionicons name="qr-code-outline" size={20} color="#374151" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* AI Insight */}
       <View style={styles.aiContainer}>
         <Ionicons name="sparkles" size={16} color="#4F46E5" />
         <Text style={styles.aiText}>
-           Glauber: Você tem <Text style={{fontWeight:'bold'}}>{products.length} itens</Text> cadastrados. Mantenha o estoque em dia!
+           Glauber: Você tem <Text style={{fontWeight:'bold'}}>{products.length} itens</Text> cadastrados.
         </Text>
       </View>
 
-      {/* Filtros */}
       <View style={styles.filterScroll}>
         <FlatList 
           horizontal
@@ -111,26 +119,28 @@ export default function ProductsScreen() {
     </View>
   );
 
-  // Card do Produto (Adaptado para MongoDB)
   const renderProduct = ({ item }: any) => {
-    // CORREÇÃO 1: Usar item.id em vez de item._id
-    // CORREÇÃO 2: Garantir que stock e price sejam números
     const stock = Number(item.stock || 0);
     const price = Number(item.salePrice || 0);
-
     const isLowStock = stock <= 3 && stock > 0;
     const isOutOfStock = stock === 0;
+
+    // APLICA A CORREÇÃO NA URL
+    const finalImageUrl = fixImageUrl(item.imageUrl);
 
     return (
       <TouchableOpacity 
         style={styles.productCard}
         activeOpacity={0.9}
-        // AQUI ESTÁ A MÁGICA: Navegar para a tela de detalhes passando o ID
         onPress={() => router.push(`/products/${item.id}`)} 
       >
         <View style={styles.imageContainer}>
-           {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
+           {finalImageUrl ? (
+              <Image 
+                source={{ uri: finalImageUrl }} 
+                style={styles.productImage} 
+                resizeMode="cover" // Garante que preencha o quadrado
+              />
            ) : (
               <View style={[styles.productImage, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
                  <Ionicons name="image-outline" size={32} color="#D1D5DB" />
@@ -166,8 +176,6 @@ export default function ProductsScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-
-      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Produtos</Text>
         <View style={styles.headerActions}>
@@ -177,11 +185,9 @@ export default function ProductsScreen() {
         </View>
       </View>
 
-      {/* LISTAGEM REAL */}
       {loading && !refreshing ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
              <ActivityIndicator size="large" color={colors.primary} />
-             <Text style={{ marginTop: 10, color: '#9CA3AF' }}>Carregando estoque...</Text>
           </View>
       ) : (
           <FlatList
@@ -193,34 +199,28 @@ export default function ProductsScreen() {
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={ListHeader}
             showsVerticalScrollIndicator={false}
-            // Pull to Refresh
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={() => {
                     setRefreshing(true);
                     fetchProducts();
                 }} />
             }
-            // Estado Vazio
             ListEmptyComponent={() => (
                 <View style={{ alignItems: 'center', marginTop: 50, padding: 20 }}>
                     <Ionicons name="cube-outline" size={64} color="#E5E7EB" />
                     <Text style={{ fontSize: 18, color: '#374151', fontWeight: 'bold', marginTop: 10 }}>Estoque vazio</Text>
-                    <Text style={{ textAlign: 'center', color: '#9CA3AF' }}>Cadastre seu primeiro produto clicando no botão + abaixo.</Text>
                 </View>
             )}
           />
       )}
 
-      {/* FAB (Botão Flutuante) */}
       <TouchableOpacity 
         style={styles.fab} 
         activeOpacity={0.8}
-        // Ajustei a rota para o seu arquivo de adicionar
         onPress={() => router.push("/products/add")} 
       >
         <Ionicons name="add" size={32} color="#000" />
       </TouchableOpacity>
-
     </View>
   );
 }

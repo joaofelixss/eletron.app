@@ -41,6 +41,7 @@ export class OrdersService {
 
   // 2. Filtra pelo sellerId
   findAll(userId: string) {
+    if (!userId) return [];
     return this.prisma.order.findMany({
       where: { sellerId: userId }, // Mostra só vendas desse usuário
       include: {
@@ -58,7 +59,7 @@ export class OrdersService {
     });
   }
 
- update(id: string, updateOrderDto: UpdateOrderDto) {
+  update(id: string, updateOrderDto: UpdateOrderDto) {
     return this.prisma.order.update({
       where: { id },
       data: updateOrderDto as any, // <--- ADICIONE O 'as any' AQUI

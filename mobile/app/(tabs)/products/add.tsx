@@ -5,18 +5,19 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as ImagePicker from 'expo-image-picker'; // <--- 1. IMPORTAR
+
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./product-form.styles"; 
 import { api } from "../../../src/services/api";
-
-// 1. IMPORTAR O NOVO MODAL
 import { SuccessModal } from "../../../src/components/SuccessModal";
+import { useAuth } from "../../../src/context/AuthContext";
 
 export default function AddProductScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth(); 
   
-  // 2. NOVO ESTADO PARA O MODAL
+  const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const [form, setForm] = useState({
@@ -27,8 +28,49 @@ export default function AddProductScreen() {
     cost: "",
     stock: "",
     description: "",
-    image: null as string | null
+    image: null as string | null // URI local da imagem
   });
+
+  // 2. FUNÇÃO PARA ABRIR GALERIA
+  const pickImage = async () => {
+    // Pede permissão
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para escolher a foto.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 4], // Quadrado
+      quality: 0.7,   // Qualidade um pouco menor para ser rápido
+    });
+
+    if (!result.canceled) {
+      setForm({ ...form, image: result.assets[0].uri });
+    }
+  };
+
+  // 3. FUNÇÃO AUXILIAR PARA UPLOAD DE IMAGEM
+  const uploadImageToBackend = async (localUri: string) => {
+    const filename = localUri.split('/').pop();
+    
+    // Infere o tipo (jpg/png)
+    const match = /\.(\w+)$/.exec(filename as string);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    const formData = new FormData();
+    // @ts-ignore (O React Native aceita esse objeto no FormData, mesmo que o TS reclame)
+    formData.append('file', { uri: localUri, name: filename, type });
+
+    const response = await api.post('/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data.url; // Retorna a URL final do backend
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.price) {
@@ -36,8 +78,24 @@ export default function AddProductScreen() {
       return;
     }
 
+    if (!user?.id) {
+        Alert.alert("Erro", "Sessão inválida.");
+        return;
+    }
+
     try {
       setLoading(true);
+      let finalImageUrl = null;
+
+      // SE TIVER IMAGEM SELECIONADA, FAZ UPLOAD PRIMEIRO
+      if (form.image) {
+         try {
+            finalImageUrl = await uploadImageToBackend(form.image);
+         } catch (err) {
+            console.log("Erro no upload da imagem", err);
+            Alert.alert("Aviso", "Erro ao subir imagem. O produto será salvo sem foto.");
+         }
+      }
 
       const payload = {
         name: form.name,
@@ -46,12 +104,11 @@ export default function AddProductScreen() {
         salePrice: parseFloat(form.price.replace(',', '.')) || 0,
         costPrice: parseFloat(form.cost.replace(',', '.')) || 0,
         stock: parseInt(form.stock) || 0,
-        imageUrl: form.image 
+        imageUrl: finalImageUrl, // <--- SALVA A URL DO BACKEND
+        userId: user.id 
       };
 
       await api.post("/products", payload);
-
-      // 3. AQUI ESTÁ A MUDANÇA: Em vez de Alert, exibimos o Modal
       setShowSuccess(true);
 
     } catch (error) {
@@ -62,10 +119,9 @@ export default function AddProductScreen() {
     }
   };
 
-  // 4. Função que roda quando clica no botão do Modal
   const handleCloseSuccess = () => {
     setShowSuccess(false);
-    router.back(); // Volta para a tela anterior
+    router.back(); 
   };
 
   const handleScan = () => {
@@ -77,14 +133,12 @@ export default function AddProductScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* --- INSERIR O MODAL AQUI (Pode ser em qualquer lugar dentro da View) --- */}
       <SuccessModal 
         visible={showSuccess} 
         onClose={handleCloseSuccess}
         title="Produto Cadastrado!"
-        message={`O produto "${form.name}" foi salvo no estoque e já está disponível para venda.`}
+        message={`O produto "${form.name}" foi salvo com sucesso.`}
       />
-      {/* ----------------------------------------------------------------------- */}
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -95,10 +149,9 @@ export default function AddProductScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* ... (Todo o resto do seu formulário continua IGUAL) ... */}
         
-        {/* FOTO UPLOAD (Placeholder) */}
-        <TouchableOpacity style={styles.imageContainer}>
+        {/* FOTO UPLOAD (AGORA FUNCIONAL) */}
+        <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
           {form.image ? (
               <Image source={{ uri: form.image }} style={styles.productImage} />
           ) : (
@@ -110,12 +163,12 @@ export default function AddProductScreen() {
           
           <View style={styles.uploadButton}>
             <Ionicons name="camera" size={16} color="#000" />
-            <Text style={styles.uploadText}>Foto</Text>
+            <Text style={styles.uploadText}>{form.image ? "Trocar" : "Foto"}</Text>
           </View>
         </TouchableOpacity>
 
         <View style={styles.formContainer}>
-            {/* NOME */}
+            {/* ... Resto do formulário igual ... */}
              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Nome do Produto *</Text>
                 <TextInput 
@@ -126,7 +179,6 @@ export default function AddProductScreen() {
                 />
              </View>
 
-             {/* SKU + SCANNER */}
              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Código de Barras / SKU</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>

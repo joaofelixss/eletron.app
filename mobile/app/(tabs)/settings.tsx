@@ -14,13 +14,21 @@ import { useRouter } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { styles } from "./settings.styles";
 
+// IMPORTANDO AUTH CONTEXT
+import { useAuth } from "../../src/context/AuthContext";
+
 export default function SettingsScreen() {
   const router = useRouter();
+  const { user, signOut } = useAuth(); // <--- Hook de Auth
   
-  // Estados dos Toggles
+  // Estados dos Toggles (Visuais por enquanto)
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [biometryEnabled, setBiometryEnabled] = useState(true);
+
+  // URL Dinâmica do Avatar
+  const avatarSeed = user?.name || "User";
+  const avatarUrl = `https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed}&backgroundColor=b6e3f4`;
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,7 +39,9 @@ export default function SettingsScreen() {
         { 
           text: "Sair", 
           style: "destructive", 
-          onPress: () => router.replace("/") // Volta pro Login
+          onPress: async () => {
+            await signOut(); // <--- LOGOUT REAL (Limpa sessão e vai pro Login)
+          } 
         }
       ]
     );
@@ -46,7 +56,8 @@ export default function SettingsScreen() {
     toggleValue, 
     onToggle,
     onPress,
-    hasSeparator = true
+    hasSeparator = true,
+    iconColor = colors.text.white // Default white se o fundo for escuro, ajuste conforme seu style
   }: any) => (
     <>
       <TouchableOpacity 
@@ -55,7 +66,8 @@ export default function SettingsScreen() {
         onPress={isToggle ? undefined : onPress}
       >
         <View style={styles.iconBox}>
-          <Ionicons name={icon} size={20} color={colors.text.white} />
+          {/* Ajustei a cor para text.muted caso o fundo seja claro, ou mantenha white se for escuro */}
+          <Ionicons name={icon} size={20} color={colors.text.onPrimary || "#FFF"} />
         </View>
         
         <View style={styles.itemContent}>
@@ -66,8 +78,8 @@ export default function SettingsScreen() {
           <Switch
             value={toggleValue}
             onValueChange={onToggle}
-            trackColor={{ false: "#333", true: colors.primary }}
-            thumbColor={toggleValue ? "#000" : "#f4f3f4"}
+            trackColor={{ false: "#E5E7EB", true: colors.primary }}
+            thumbColor={toggleValue ? "#FFF" : "#f4f3f4"}
           />
         ) : (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -94,24 +106,26 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
-        {/* PERFIL (Header clicável para editar) */}
+        {/* PERFIL (DADOS REAIS) */}
         <TouchableOpacity 
           style={styles.profileSection} 
           activeOpacity={0.8}
-          // Futuramente vai para a tela de Perfil
-          onPress={() => alert("Ir para Editar Perfil")} 
+          onPress={() => router.push("/profile/avatar-editor")} 
         >
           <View style={styles.avatarContainer}>
             <Image 
-              source={{ uri: "https://ui-avatars.com/api/?name=Carlos+Silva&background=0A0A0A&color=EAC54F&size=256" }} 
+              source={{ uri: avatarUrl }} 
               style={styles.avatar} 
             />
             <View style={styles.editBadge}>
-              <Ionicons name="pencil" size={16} color={colors.primary} />
+              <Ionicons name="pencil" size={12} color="#FFF" />
             </View>
           </View>
-          <Text style={styles.userName}>Carlos Silva</Text>
-          <Text style={styles.userRole}>Técnico - Eletron Centro</Text>
+          <Text style={styles.userName}>{user?.name || "Usuário"}</Text>
+          <Text style={styles.userRole}>
+             {/* Exemplo de lógica simples de cargo */}
+             Dono • {user?.storeName || "Minha Loja"}
+          </Text>
         </TouchableOpacity>
 
         {/* GRUPO: GERAL */}
@@ -175,7 +189,6 @@ export default function SettingsScreen() {
           <SettingsItem 
             icon="help-circle-outline" 
             label="Central de Ajuda" 
-            iconColor={colors.primary}
             onPress={() => {}} 
           />
           <SettingsItem 

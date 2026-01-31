@@ -36,7 +36,7 @@ export default function LoginScreen() {
     setPhone(maskPhone(text));
   };
 
- async function handleLogin() {
+  async function handleLogin() {
     const rawPhone = unmask(phone);
     if (rawPhone.length < 11) {
       Alert.alert("Erro", "Digite o número completo com DDD.");
@@ -49,21 +49,18 @@ export default function LoginScreen() {
     try {
       // 1. Verifica se existe
       const checkRes = await api.post('/auth/check-phone', { phone: rawPhone });
-      const { exists, name } = checkRes.data;
+      const data = checkRes.data; // <--- Vamos chamar de 'data' pra facilitar
 
-     if (exists) {
-        setLoadingMessage(`Olá, ${name.split(' ')[0]}!`);
+      if (data.exists) {
+        setLoadingMessage(`Olá, ${data.name.split(' ')[0]}!`);
         
-        // RECUPERA DADOS COMPLETOS DO USUÁRIO (O Backend deveria retornar o user completo aqui)
-        // Por enquanto, vamos simular que pegamos o ID. 
-        // *Importante: Atualize seu backend /check-phone para retornar o objeto user completo*
-        
+        // CORREÇÃO AQUI: Usar 'data' em vez de 'response.data'
         const userData = {
-            id: response.data.id, // <--- O BACKEND PRECISA RETORNAR ISSO
-            name: response.data.name,
+            id: data.id, 
+            name: data.name,
             phone: rawPhone,
-            email: response.data.email,
-            storeName: response.data.storeName
+            email: data.email,
+            storeName: data.storeName
         };
 
         setTimeout(async () => {
@@ -87,6 +84,7 @@ export default function LoginScreen() {
       }
 
     } catch (error) {
+      console.log(error); // Bom para debug
       setLoading(false);
       Alert.alert("Erro", "Falha na conexão. Tente novamente.");
     }

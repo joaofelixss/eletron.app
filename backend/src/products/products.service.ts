@@ -19,6 +19,7 @@ export class ProductsService {
 
   // 2. Filtra pelo userId
   findAll(userId: string) {
+    if (!userId) return [];
     return this.prisma.product.findMany({
       where: { userId: userId },
     });
