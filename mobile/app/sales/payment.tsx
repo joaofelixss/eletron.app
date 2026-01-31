@@ -16,6 +16,7 @@ import { colors } from "../../src/constants/colors";
 import { salesStyles as styles } from "./sales.styles"; 
 import { api } from "../../src/services/api";
 import { SuccessModal } from "../../src/components/SuccessModal";
+import { useAuth } from "../../src/context/AuthContext"; // <--- 1. IMPORTAR AUTH
 
 // Opções de Pagamento
 const PAYMENT_METHODS = [
@@ -28,6 +29,7 @@ const PAYMENT_METHODS = [
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useAuth(); // <--- 2. PEGAR USUÁRIO
 
   // --- DADOS DO PEDIDO ---
   const [orderData, setOrderData] = useState<any>(null);
@@ -44,7 +46,6 @@ export default function PaymentScreen() {
   const [processing, setProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // --- CORREÇÃO DO LOOP INFINITO ---
   useEffect(() => {
     if (params.orderData) {
         try {
@@ -54,25 +55,25 @@ export default function PaymentScreen() {
             router.back();
         }
     }
-  }, []); // <--- IMPORTANTE: Array vazio aqui!
+  }, []);
 
   if (!orderData) return null;
 
   // --- CÁLCULOS ---
-  const totalOrder = orderData.total;
+  const totalOrder = Number(orderData.total);
   const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
   const remaining = totalOrder - totalPaid;
   const change = remaining < 0 ? Math.abs(remaining) : 0; // Troco
 
   // Abrir Modal de Pagamento
   const handleSelectMethod = (method: any) => {
-      if (remaining <= 0 && change === 0) {
+      if (remaining <= 0.01 && change >= 0) {
           Alert.alert("Pronto", "O valor total já foi coberto.");
           return;
       }
       
       setSelectedMethod(method);
-      // Sugere o valor restante
+      // Sugere o valor restante (se for positivo)
       setAmountInput(remaining > 0 ? remaining.toFixed(2) : ""); 
       setModalVisible(true);
   };
@@ -104,8 +105,14 @@ export default function PaymentScreen() {
 
   // --- FINALIZAR VENDA ---
   const handleFinishSale = async () => {
+      // Verifica se falta pagar (com margem de erro de centavos)
       if (remaining > 0.01) { 
           Alert.alert("Atenção", `Ainda faltam R$ ${remaining.toFixed(2)} para fechar a conta.`);
+          return;
+      }
+
+      if (!user?.id) {
+          Alert.alert("Erro", "Sessão inválida. Faça login novamente.");
           return;
       }
 
@@ -115,6 +122,7 @@ export default function PaymentScreen() {
           const mainPaymentType = payments.length > 1 ? 'SPLIT' : payments[0].method;
 
           const payload = {
+              userId: user.id, // <--- 3. VINCULAR AO USUÁRIO
               clientId: orderData.clientId,
               total: orderData.total,
               discount: orderData.discount,
@@ -141,8 +149,8 @@ export default function PaymentScreen() {
 
   const closeSuccess = () => {
       setShowSuccess(false);
-      // Volta para a Home e limpa o histórico de navegação de vendas
-      router.push("/(tabs)/home"); 
+      // Volta para a Home e limpa o histórico
+      router.push("/(tabs)/home/home"); 
   };
 
   return (
@@ -210,7 +218,7 @@ export default function PaymentScreen() {
         {/* 1. GRANDE TOTAL (HERO) */}
         <View style={{ alignItems: 'center', marginVertical: 20 }}>
             <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 4 }}>
-                {remaining > 0 ? "Falta Pagar" : (change > 0 ? "Troco a Devolver" : "Total Pago")}
+                {remaining > 0.01 ? "Falta Pagar" : (change > 0 ? "Troco a Devolver" : "Total Pago")}
             </Text>
             
             <Text style={{ 
@@ -218,7 +226,7 @@ export default function PaymentScreen() {
                 fontWeight: 'bold', 
                 color: remaining > 0.01 ? '#000' : (change > 0 ? colors.warning : colors.success) 
             }}>
-                R$ {remaining > 0 ? remaining.toFixed(2) : change.toFixed(2)}
+                R$ {remaining > 0.01 ? remaining.toFixed(2) : change.toFixed(2)}
             </Text>
         </View>
 

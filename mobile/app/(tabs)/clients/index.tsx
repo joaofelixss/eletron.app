@@ -17,8 +17,9 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./clients.styles";
 
-// 1. IMPORTAR API
+// 1. IMPORTAR API E AUTH
 import { api } from "../../../src/services/api";
+import { useAuth } from "../../../src/context/AuthContext";
 
 // Função para gerar cor de fundo baseada no nome
 const getAvatarColor = (name: string) => {
@@ -41,6 +42,7 @@ const getInitials = (name: string) => {
 
 export default function ClientsScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 2. PEGAR O USUÁRIO
   
   // ESTADOS REAIS
   const [clients, setClients] = useState<any[]>([]);
@@ -50,9 +52,16 @@ export default function ClientsScreen() {
 
   // --- BUSCAR CLIENTES DO BACKEND ---
   async function fetchClients() {
+    if (!user?.id) return; // Proteção
+
     try {
       if (!refreshing) setLoading(true);
-      const response = await api.get('/clients');
+      
+      // 3. ENVIA O USERID NO FILTRO
+      const response = await api.get('/clients', {
+        params: { userId: user.id }
+      });
+      
       setClients(response.data);
     } catch (error) {
       console.log("Erro ao buscar clientes:", error);
@@ -65,7 +74,7 @@ export default function ClientsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchClients();
-    }, [])
+    }, [user]) // <--- Atualiza se o usuário mudar
   );
 
   // Filtro Local
@@ -95,7 +104,7 @@ export default function ClientsScreen() {
         style={styles.clientCard} 
         activeOpacity={0.7}
         // Futuramente faremos a tela de detalhes do cliente
-       onPress={() => router.push(`/clients/${item.id}`)}
+        onPress={() => router.push(`/clients/${item.id}`)}
       >
         {/* Avatar Dinâmico */}
         <View style={[styles.avatarContainer, { backgroundColor: item.image ? 'transparent' : avatarBg }]}>
@@ -115,10 +124,6 @@ export default function ClientsScreen() {
                {/* Formatação simples se tiver número */}
                {item.phone || "Sem telefone"}
             </Text>
-            
-            {/* Como o backend ainda não tem 'lastVisit', ocultamos ou mostramos fixo */}
-            {/* <View style={styles.dotSeparator} />
-            <Text style={styles.lastVisit}>Novo</Text> */}
           </View>
 
           {/* Tags (Baseado no CPF ou Notes por enquanto) */}
@@ -156,7 +161,7 @@ export default function ClientsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Meus Clientes</Text>
         <TouchableOpacity style={styles.iconButton} onPress={fetchClients}>
-             <Ionicons name="reload" size={20} color={colors.text.main} />
+              <Ionicons name="reload" size={20} color={colors.text.main} />
         </TouchableOpacity>
       </View>
 

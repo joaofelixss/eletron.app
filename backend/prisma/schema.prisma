@@ -73,6 +73,8 @@ model Client {
   address   String?
   notes     String?
 
+  image     String?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

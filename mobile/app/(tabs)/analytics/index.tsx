@@ -17,20 +17,28 @@ import { colors } from "../../../src/constants/colors";
 // IMPORTANDO OS ESTILOS
 import { styles } from "./analytics.styles";
 
-// API
+// API E AUTH
 import { api } from "../../../src/services/api";
+import { useAuth } from "../../../src/context/AuthContext";
 
 export default function AnalyticsScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 1. PEGAR USUÁRIO
+
   const [period, setPeriod] = useState("30 dias");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- 1. BUSCAR DADOS REAIS ---
+  // --- 2. BUSCAR DADOS REAIS ---
   useEffect(() => {
     async function fetchData() {
+      if (!user?.id) return;
+
       try {
-        const response = await api.get('/orders');
+        // Filtra por userId
+        const response = await api.get('/orders', {
+            params: { userId: user.id }
+        });
         setOrders(response.data);
       } catch (error) {
         console.log("Erro analytics:", error);
@@ -38,23 +46,35 @@ export default function AnalyticsScreen() {
         setLoading(false);
       }
     }
-    fetchData();
-  }, []);
+    
+    if (user?.id) fetchData();
+  }, [user]);
 
-  // --- 2. CÁLCULOS (Engine de Dados) ---
+  // --- 3. CÁLCULOS (Engine de Dados) ---
   const reportData = useMemo(() => {
     const now = new Date();
     
     // Filtrar Pedidos pela Data
     const filtered = orders.filter(o => {
         const d = new Date(o.createdAt);
-        if (period === "Hoje") return d.toDateString() === now.toDateString();
+        
+        // Função auxiliar para zerar horas e comparar apenas datas
+        const isSameDay = (d1: Date, d2: Date) => 
+            d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
+
+        if (period === "Hoje") {
+            return isSameDay(d, now);
+        }
         if (period === "7 dias") {
-            const date7 = new Date(); date7.setDate(now.getDate() - 7);
+            const date7 = new Date(now); 
+            date7.setDate(now.getDate() - 7);
             return d >= date7;
         }
         if (period === "30 dias") {
-            const date30 = new Date(); date30.setDate(now.getDate() - 30);
+            const date30 = new Date(now); 
+            date30.setDate(now.getDate() - 30);
             return d >= date30;
         }
         if (period === "Mês Atual") {
@@ -67,9 +87,8 @@ export default function AnalyticsScreen() {
     const revenue = filtered.reduce((acc, o) => acc + Number(o.total), 0);
     const count = filtered.length;
     
-    // Simulação de Custos e Lucros (Baseado em margem média de 30% de lucro líquido)
-    // No futuro, podemos pegar o custo real do produto no banco.
-    const profitMargin = 0.33; // 33%
+    // Simulação de Custos e Lucros (Baseado em margem média de 33% de lucro líquido)
+    const profitMargin = 0.33; 
     const profit = revenue * profitMargin;
     const expenses = revenue - profit;
     const ticket = count > 0 ? revenue / count : 0;
@@ -82,7 +101,7 @@ export default function AnalyticsScreen() {
         margin: "33%",
         orders: count,
         ticket: ticket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-        growth: "+12%" // Mock de crescimento (comparativo complexo fica pra v2)
+        growth: "+12%" // Mock de crescimento
     };
   }, [orders, period]);
 

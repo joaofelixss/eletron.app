@@ -15,11 +15,13 @@ import { useRouter } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { salesStyles as styles } from "./sales.styles";
 
-// IMPORTAR API
+// IMPORTAR API E AUTH
 import { api } from "../../src/services/api";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function CreateOrderScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 1. PEGAR O USUÁRIO
   
   // --- ESTADOS ---
   const [products, setProducts] = useState<any[]>([]);
@@ -29,11 +31,15 @@ export default function CreateOrderScreen() {
   // Estados de Carregamento
   const [loading, setLoading] = useState(true);
 
-  // 1. CARREGAR PRODUTOS
+  // 2. CARREGAR PRODUTOS (FILTRADO)
   useEffect(() => {
     async function loadData() {
+      if (!user?.id) return; // Proteção
+
       try {
-        const response = await api.get('/products');
+        const response = await api.get('/products', {
+            params: { userId: user.id } // Filtro
+        });
         setProducts(response.data);
       } catch (error) {
         console.log("Erro ao carregar produtos", error);
@@ -42,13 +48,14 @@ export default function CreateOrderScreen() {
         setLoading(false);
       }
     }
-    loadData();
-  }, []);
+    
+    if (user?.id) loadData();
+  }, [user]);
 
-  // Filtro de Produtos (Busca)
+  // Filtro de Produtos (Busca Local)
   const filteredProducts = products.filter(p => 
-     p.name.toLowerCase().includes(search.toLowerCase()) || 
-     (p.sku && p.sku.includes(search))
+      p.name.toLowerCase().includes(search.toLowerCase()) || 
+      (p.sku && p.sku.includes(search))
   );
 
   // --- LÓGICA DO CARRINHO ---
@@ -96,7 +103,7 @@ export default function CreateOrderScreen() {
   // Calcular Total
   const total = cart.reduce((acc, item) => acc + (Number(item.salePrice) * item.qty), 0);
 
-  // 2. AVANÇAR PARA REVISÃO
+  // 3. AVANÇAR PARA REVISÃO
   const handleNextStep = () => {
     if (cart.length === 0) {
       Alert.alert("Carrinho Vazio", "Adicione produtos para continuar.");

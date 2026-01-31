@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from 'expo-image-picker'; // <--- Importar ImagePicker
+
 import { colors } from "../../../src/constants/colors";
 import { formStyles as styles } from "./client-form.styles";
 
@@ -43,6 +45,9 @@ export default function ClientDetailScreen() {
     image: null as string | null
   });
 
+  // Estado para nova foto (se for editar)
+  const [newImageUri, setNewImageUri] = useState<string | null>(null);
+
   // --- 1. BUSCAR DADOS DO CLIENTE ---
   useEffect(() => {
     async function fetchClient() {
@@ -55,7 +60,7 @@ export default function ClientDetailScreen() {
             email: data.email || "",
             notes: data.notes || "",
             cpf: data.cpf || "",
-            image: null // Ainda não temos foto no banco
+            image: data.image || null // <--- Agora puxa a imagem do banco
         });
       } catch (error) {
         Alert.alert("Erro", "Cliente não encontrado.");
@@ -67,20 +72,77 @@ export default function ClientDetailScreen() {
     if (id) fetchClient();
   }, [id]);
 
+  // --- FUNÇÃO DE ESCOLHER FOTO ---
+  const pickImage = async () => {
+    if (!isEditing) return; // Só permite trocar foto no modo edição
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permissão necessária", "Precisamos de acesso à galeria.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setNewImageUri(result.assets[0].uri); // Guarda temporariamente para upload
+    }
+  };
+
+  // --- UPLOAD PARA CLOUDINARY ---
+  const uploadImageToBackend = async (localUri: string) => {
+    const filename = localUri.split('/').pop();
+    const match = /\.(\w+)$/.exec(filename as string);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    const formData = new FormData();
+    // @ts-ignore
+    formData.append('file', { uri: localUri, name: filename, type });
+
+    const response = await api.post('/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data.url;
+  };
+
   // --- 2. SALVAR ALTERAÇÕES (PATCH) ---
   const handleSave = async () => {
     try {
       setSaving(true);
       
+      let finalImageUrl = form.image;
+
+      // Se o usuário selecionou uma nova foto, faz upload
+      if (newImageUri) {
+          try {
+             finalImageUrl = await uploadImageToBackend(newImageUri);
+          } catch (err) {
+             console.log("Erro upload", err);
+             Alert.alert("Aviso", "Erro ao subir nova foto. Mantendo a antiga.");
+          }
+      }
+
       const payload = {
         name: form.name,
         phone: form.phone,
         email: form.email,
         cpf: form.cpf,
-        notes: form.notes
+        notes: form.notes,
+        image: finalImageUrl // Salva a URL nova (ou mantém a antiga)
       };
 
       await api.patch(`/clients/${id}`, payload);
+      
+      // Atualiza o estado local com a imagem final
+      setForm(prev => ({ ...prev, image: finalImageUrl }));
+      setNewImageUri(null);
       
       setShowSuccess(true);
       setIsEditing(false);
@@ -96,7 +158,7 @@ export default function ClientDetailScreen() {
   const confirmDelete = async () => {
     try {
       setShowDelete(false);
-      setLoading(true); // Bloqueia a tela
+      setLoading(true); 
       await api.delete(`/clients/${id}`);
       router.back();
     } catch (error) {
@@ -115,6 +177,11 @@ export default function ClientDetailScreen() {
     if (!form.phone) return;
     Linking.openURL(`tel:${form.phone}`);
   };
+
+  // URL para exibir (Prioridade: Nova URI local > Imagem do Banco > Avatar Gerado)
+  const displayImage = newImageUri || form.image || (form.name.length > 2 
+    ? `https://api.dicebear.com/9.x/avataaars/png?seed=${encodeURIComponent(form.name)}&backgroundColor=b6e3f4`
+    : null);
 
   if (loading) {
       return (
@@ -153,7 +220,10 @@ export default function ClientDetailScreen() {
         
         <Text style={styles.title}>{isEditing ? "Editar Cliente" : "Detalhes"}</Text>
         
-        <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+        <TouchableOpacity onPress={() => {
+            setIsEditing(!isEditing);
+            setNewImageUri(null); // Reseta foto temporária se cancelar
+        }}>
           <Text style={styles.saveButtonText}>{isEditing ? "Cancelar" : "Editar"}</Text>
         </TouchableOpacity>
       </View>
@@ -161,14 +231,16 @@ export default function ClientDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         
         {/* FOTO E NOME */}
-        <View style={styles.photoContainer}>
+        <TouchableOpacity 
+            style={styles.photoContainer} 
+            onPress={pickImage} 
+            activeOpacity={isEditing ? 0.7 : 1}
+        >
           <View style={styles.photoCircle}>
-             {form.image ? (
-                <Image source={{uri: form.image}} style={styles.photoImage} />
+             {displayImage ? (
+                <Image source={{ uri: displayImage }} style={{ width: 100, height: 100, borderRadius: 50 }} />
              ) : (
-                <Text style={{fontSize: 32, fontWeight: 'bold', color: "#9CA3AF"}}>
-                    {form.name ? form.name.substring(0,2).toUpperCase() : "??"}
-                </Text>
+                <Ionicons name="person" size={40} color="#9CA3AF" />
              )}
           </View>
           
@@ -188,7 +260,9 @@ export default function ClientDetailScreen() {
                 </Text>
              </View>
           )}
-        </View>
+          
+          {isEditing && <Text style={{ marginTop: 8, fontSize: 12, color: "#6B7280" }}>Toque para alterar foto</Text>}
+        </TouchableOpacity>
 
         {/* --- MODO VISUALIZAÇÃO (READ ONLY) --- */}
         {!isEditing && (
@@ -324,4 +398,3 @@ export default function ClientDetailScreen() {
     </View>
   );
 }
-

@@ -15,10 +15,11 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./orders.styles";
 
-// 1. IMPORTAR API
+// 1. IMPORTAR API E AUTH
 import { api } from "../../../src/services/api";
+import { useAuth } from "../../../src/context/AuthContext";
 
-// Configuração Visual dos Status (Mantive sua lógica bonita)
+// Configuração Visual dos Status
 const STATUS_CONFIG: any = {
   PAID: { 
     label: "Pago", 
@@ -42,6 +43,7 @@ const STATUS_CONFIG: any = {
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 2. PEGAR O USUÁRIO
   
   // ESTADOS REAIS
   const [orders, setOrders] = useState<any[]>([]);
@@ -52,9 +54,16 @@ export default function OrdersScreen() {
 
   // --- BUSCAR PEDIDOS ---
   async function fetchOrders() {
+    if (!user?.id) return; // Proteção
+
     try {
       if (!refreshing) setLoading(true);
-      const response = await api.get('/orders');
+      
+      // 3. ENVIAR O USERID
+      const response = await api.get('/orders', {
+        params: { userId: user.id }
+      });
+      
       setOrders(response.data);
     } catch (error) {
       console.log("Erro ao buscar pedidos:", error);
@@ -67,7 +76,7 @@ export default function OrdersScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchOrders();
-    }, [])
+    }, [user]) // <--- Atualiza se mudar o user
   );
 
   // --- FILTROS ---
@@ -93,7 +102,7 @@ export default function OrdersScreen() {
     const clientName = item.client?.name || "Consumidor Final";
 
     // Resumo dos Itens (Ex: "iPhone 13 + 2 outros")
-    const firstItem = item.items?.[0]?.name || "Produto Diversos";
+    const firstItem = item.items?.[0]?.product?.name || item.items?.[0]?.name || "Produto Diversos"; // <--- Correção para pegar o nome
     const moreItems = item.items?.length > 1 ? `+ ${item.items.length - 1} outros` : "";
     const description = `${firstItem} ${moreItems}`;
 
@@ -104,9 +113,9 @@ export default function OrdersScreen() {
 
     return (
       <TouchableOpacity 
-         style={styles.orderCard} 
-         activeOpacity={0.7}
-         onPress={() => router.push(`/orders/${item.id}`)}
+          style={styles.orderCard} 
+          activeOpacity={0.7}
+          onPress={() => router.push(`/orders/${item.id}`)}
       >
         {/* Header do Card */}
         <View style={styles.cardHeader}>
@@ -117,7 +126,7 @@ export default function OrdersScreen() {
         {/* Corpo do Card */}
         <View style={styles.cardBody}>
           <View style={styles.deviceIconBox}>
-             <Ionicons name="receipt-outline" size={24} color="#374151" />
+              <Ionicons name="receipt-outline" size={24} color="#374151" />
           </View>
           <View>
             <Text style={styles.clientName}>{clientName}</Text>

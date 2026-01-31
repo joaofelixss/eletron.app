@@ -14,19 +14,26 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../src/constants/colors";
 import { styles } from "./inventory.styles";
 
-// 1. IMPORTAR API
+// 1. IMPORTAR API E AUTH
 import { api } from "../../../src/services/api";
+import { useAuth } from "../../../src/context/AuthContext";
 
 export default function InventoryScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 2. PEGAR O USUÁRIO
   
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // --- BUSCAR DADOS DO MONGODB ---
   async function fetchInventory() {
+    if (!user?.id) return; // Proteção: só busca se tiver usuário
+
     try {
-      const response = await api.get('/products');
+      // 3. ENVIA O USERID NO FILTRO
+      const response = await api.get('/products', {
+        params: { userId: user.id }
+      });
       setProducts(response.data);
     } catch (error) {
       console.log("Erro ao carregar estoque:", error);
@@ -38,7 +45,7 @@ export default function InventoryScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchInventory();
-    }, [])
+    }, [user]) // <--- Atualiza se o usuário mudar
   );
 
   // --- FUNÇÃO PARA ALTERAR ESTOQUE (+ / -) ---
@@ -46,6 +53,7 @@ export default function InventoryScreen() {
     const newStock = currentStock + change;
     if (newStock < 0) return; 
 
+    // Atualização Otimista (Visual muda na hora)
     setProducts(prev => prev.map(item => 
         item.id === id ? { ...item, stock: newStock } : item
     ));
@@ -54,7 +62,7 @@ export default function InventoryScreen() {
         await api.patch(`/products/${id}`, { stock: newStock });
     } catch (error) {
         Alert.alert("Erro", "Falha ao atualizar estoque.");
-        fetchInventory(); 
+        fetchInventory(); // Reverte se der erro
     }
   };
 
@@ -78,11 +86,9 @@ export default function InventoryScreen() {
     const isLow = stock <= 3;
 
     return (
-      // MUDANÇA AQUI: Trocamos View por TouchableOpacity para ser clicável
       <TouchableOpacity 
         style={styles.itemCard}
         activeOpacity={0.9}
-        // Ao clicar no card, vai para a tela de detalhes
         onPress={() => router.push(`/products/${item.id}`)}
       >
         {/* Imagem + Indicador */}
@@ -110,7 +116,7 @@ export default function InventoryScreen() {
             </Text>
         </View>
 
-        {/* Controle Rápido (Os botões internos funcionam independentes) */}
+        {/* Controle Rápido */}
         <View style={styles.stockControl}>
             <Text style={[styles.stockValue, { color: isLow ? colors.danger : "#000" }]}>
                 {stock}
@@ -119,7 +125,6 @@ export default function InventoryScreen() {
             <View style={styles.stepper}>
                 <TouchableOpacity 
                     style={styles.stepBtn}
-                    // stopPropagation não é necessário no RN padrão, o toque interno ganha prioridade
                     onPress={() => handleStockChange(item.id, stock, -1)}
                 >
                     <Ionicons name="remove" size={14} color="#000" />

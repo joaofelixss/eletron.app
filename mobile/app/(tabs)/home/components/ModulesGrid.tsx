@@ -1,11 +1,14 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import { colors } from "../../../../src/constants/colors";
 
-// IMPORTAR API
+// IMPORTAR API E AUTH
 import { api } from "../../../../src/services/api";
+import { useAuth } from "../../../../src/context/AuthContext";
+
+// IMPORTAR ESTILOS
+import { styles } from "./ModulesGrid.styles";
 
 const ModuleItem = ({ icon, label, onPress, color, stat, isAlert, loading }: any) => (
   <TouchableOpacity 
@@ -39,6 +42,7 @@ const ModuleItem = ({ icon, label, onPress, color, stat, isAlert, loading }: any
 
 export const ModulesGrid = () => {
   const router = useRouter();
+  const { user } = useAuth(); // <--- PEGAR USUÁRIO
 
   // --- ESTADOS DO DASHBOARD ---
   const [stats, setStats] = useState({
@@ -51,12 +55,14 @@ export const ModulesGrid = () => {
 
   // --- BUSCAR DADOS REAIS ---
   const fetchDashboardData = async () => {
+    if (!user?.id) return; // Proteção
+
     try {
-      // Fazemos as 3 requisições ao mesmo tempo para ser rápido
+      // Fazemos as 3 requisições ao mesmo tempo, filtrando pelo userId
       const [productsRes, ordersRes, clientsRes] = await Promise.all([
-        api.get('/products'),
-        api.get('/orders'),
-        api.get('/clients')
+        api.get('/products', { params: { userId: user.id } }),
+        api.get('/orders', { params: { userId: user.id } }),
+        api.get('/clients', { params: { userId: user.id } })
       ]);
 
       const products = productsRes.data;
@@ -83,11 +89,11 @@ export const ModulesGrid = () => {
     }
   };
 
-  // Atualiza sempre que a tela ganha foco (Volta pra Home)
+  // Atualiza sempre que a tela ganha foco
   useFocusEffect(
     useCallback(() => {
       fetchDashboardData();
-    }, [])
+    }, [user])
   );
 
   return (
@@ -106,9 +112,9 @@ export const ModulesGrid = () => {
           icon="layers-outline" 
           label="Estoque" 
           stat={stats.lowStock > 0 ? `${stats.lowStock} Baixos` : "Ok"} 
-          isAlert={stats.lowStock > 0} // Fica vermelho se tiver estoque baixo
+          isAlert={stats.lowStock > 0} 
           loading={loading}
-          onPress={() => router.push("/(tabs)/products/inventory")}
+          onPress={() => router.push("/products/inventory")}
           color="#10B981" 
         />
         <ModuleItem 
@@ -133,88 +139,22 @@ export const ModulesGrid = () => {
           color="#8B5CF6" 
         />
         
-        {/* Módulos Futuros (Ainda Mockados por enquanto) */}
+        {/* Módulos Futuros (Em breve) */}
         <ModuleItem 
           icon="storefront-outline" 
           label="Loja" 
           stat="Em Breve"
-          onPress={() => router.push("/(tabs)/marketing")} // Ajustei rota
+          onPress={() => {}} // Sem rota ainda
           color="#EC4899" 
         />
         <ModuleItem 
           icon="chatbubbles-outline" 
           label="Chat IA" 
           stat="Off"
-          onPress={() => router.push("/(tabs)/chat")}
+          onPress={() => {}} // Sem rota ainda
           color="#6366F1" 
         />
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 125,
-    padding: 0, 
-    overflow: "hidden", 
-    justifyContent: "space-between", 
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  topContent: {
-    flex: 1, 
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 12, 
-    paddingHorizontal: 4,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  label: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: colors.text.main,
-    textAlign: "center",
-    marginBottom: 8, 
-  },
-  statBar: {
-    width: "100%", 
-    backgroundColor: colors.primary, 
-    paddingVertical: 6, 
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statBarAlert: {
-    backgroundColor: "#FEE2E2", // Vermelho claro
-  },
-  statText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 10,
-    color: "#000000",
-    textTransform: "uppercase", 
-    letterSpacing: 0.5,
-  },
-});

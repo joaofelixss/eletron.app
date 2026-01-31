@@ -45,7 +45,12 @@ export default function OrderDetailsScreen() {
   const handleShare = async () => {
     if (!order) return;
 
-    const itemsList = order.items.map((i: any) => `${i.quantity}x ${i.name}`).join('\n');
+    // Correção para pegar o nome do produto corretamente
+    const itemsList = order.items.map((i: any) => {
+        const name = i.product?.name || i.name || "Item sem nome";
+        return `${i.quantity}x ${name}`;
+    }).join('\n');
+
     const total = Number(order.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     const date = new Date(order.createdAt).toLocaleDateString();
 
@@ -157,19 +162,24 @@ export default function OrderDetailsScreen() {
         {/* ITENS */}
         <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Resumo do Pedido</Text>
-            {order.items.map((item: any) => (
-                <View key={item.id} style={styles.itemRow}>
-                    <View style={styles.qtyBadge}>
-                        <Text style={styles.qtyText}>{item.quantity}x</Text>
+            {order.items.map((item: any) => {
+                // Correção de nome aqui também
+                const productName = item.product?.name || item.name || "Produto";
+                
+                return (
+                    <View key={item.id} style={styles.itemRow}>
+                        <View style={styles.qtyBadge}>
+                            <Text style={styles.qtyText}>{item.quantity}x</Text>
+                        </View>
+                        <View style={styles.itemInfo}>
+                            <Text style={{ fontFamily: "Poppins_500Medium" }}>{productName}</Text>
+                        </View>
+                        <Text style={styles.itemPrice}>
+                            {Number(item.price * item.quantity).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </Text>
                     </View>
-                    <View style={styles.itemInfo}>
-                        <Text style={{ fontFamily: "Poppins_500Medium" }}>{item.name}</Text>
-                    </View>
-                    <Text style={styles.itemPrice}>
-                        {Number(item.price * item.quantity).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </Text>
-                </View>
-            ))}
+                );
+            })}
             
             {/* TOTAIS */}
             <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: "#F3F4F6" }}>

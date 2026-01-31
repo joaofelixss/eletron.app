@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { colors } from "../../../../src/constants/colors";
-import { styles } from "./PerformanceStats.styles"; // Importando o CSS separado
+import { styles } from "./PerformanceStats.styles"; 
 
-// API
+// API E AUTH
 import { api } from "../../../../src/services/api";
+import { useAuth } from "../../../../src/context/AuthContext";
 
 const StatRow = ({ icon, label, value, trend, color }: any) => (
   <View style={styles.statRow}>
@@ -19,6 +20,8 @@ const StatRow = ({ icon, label, value, trend, color }: any) => (
 
     <View style={{ alignItems: "flex-end" }}>
       <Text style={styles.statValue}>{value}</Text>
+      
+      {/* Trend Mockado por enquanto */}
       <View style={styles.trendBox}>
         <Ionicons 
             name={trend >= 0 ? "caret-up" : "caret-down"} 
@@ -35,14 +38,21 @@ const StatRow = ({ icon, label, value, trend, color }: any) => (
 
 export const PerformanceStats = () => {
   const router = useRouter();
+  const { user } = useAuth(); // <--- 1. PEGAR USUÁRIO
+
   const [period, setPeriod] = useState("Hoje");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // --- BUSCAR DADOS DE VENDAS ---
   const fetchSalesData = async () => {
+    if (!user?.id) return;
+
     try {
-      const response = await api.get('/orders');
+      // 2. FILTRAR POR USERID
+      const response = await api.get('/orders', {
+          params: { userId: user.id }
+      });
       setOrders(response.data);
     } catch (error) {
       console.log("Erro stats:", error);
@@ -54,7 +64,7 @@ export const PerformanceStats = () => {
   useFocusEffect(
     useCallback(() => {
       fetchSalesData();
-    }, [])
+    }, [user])
   );
 
   // --- CÁLCULOS DINÂMICOS ---
@@ -65,8 +75,14 @@ export const PerformanceStats = () => {
     const filteredOrders = orders.filter((o: any) => {
         const orderDate = new Date(o.createdAt);
         
+        // Zera as horas para comparar datas corretamente
+        const isSameDay = (d1: Date, d2: Date) => 
+            d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
+
         if (period === "Hoje") {
-            return orderDate.toDateString() === now.toDateString();
+            return isSameDay(orderDate, now);
         }
         if (period === "7d") {
             const sevenDaysAgo = new Date(now);
@@ -98,6 +114,7 @@ export const PerformanceStats = () => {
   return (
     <View style={styles.container}>
       
+      {/* HEADER DO CARD */}
       <View style={styles.header}>
         <Text style={styles.title}>Desempenho</Text>
         <View style={styles.tabs}>
@@ -176,9 +193,10 @@ export const PerformanceStats = () => {
         {/* FOOTER ACTION */}
         <TouchableOpacity 
           style={styles.linkButton}
-          onPress={() => router.push("/(tabs)/analytics")}
+          // Se ainda não tiver a rota analytics, pode apontar para orders ou deixar vazio
+          onPress={() => router.push("/(tabs)/analytics")} 
         >
-          <Text style={styles.linkText}>Ver Relatório Completo</Text>
+          <Text style={styles.linkText}>Ver Relatório Detalhado</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.text.main} />
         </TouchableOpacity>
       </View>
