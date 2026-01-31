@@ -87,8 +87,9 @@ export class OrdersService {
     return `Funcionalidade de editar pedido #${id} em construção`;
   }
 
-async remove(id: string) {
-    if (!/^[0-9a-fA-F]{24}$/.test(id)) throw new NotFoundException('ID Inválido');
+  async remove(id: string) {
+    if (!/^[0-9a-fA-F]{24}$/.test(id))
+      throw new NotFoundException('ID Inválido');
 
     // 1. Busca o pedido para ter certeza que existe e pegar os itens
     const order = await this.prisma.order.findUnique({

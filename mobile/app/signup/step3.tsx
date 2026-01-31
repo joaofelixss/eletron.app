@@ -11,13 +11,14 @@ import {
   Keyboard,
   Alert
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./signup.styles";
 import { colors } from "../../src/constants/colors";
 
 export default function SignupStep3() {
   const router = useRouter();
+  const params = useLocalSearchParams(); // Recebe dados do Step 2
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +34,13 @@ export default function SignupStep3() {
     }
 
     // MUDANÇA: Vai para a configuração do Assistente (Step 4)
-    router.push("/signup/step4");
+   router.push({
+        pathname: "/signup/step4",
+        params: { 
+            ...params, // Repassa tudo anterior
+            password
+        }
+    });
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -13,40 +13,71 @@ import {
   Alert,
   ActivityIndicator
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { styles } from "./signup.styles"; // Reutilizando estilos
+import { styles } from "./signup.styles"; 
 import { colors } from "../../src/constants/colors";
+
+// IMPORTAR API
+import { api } from "../../src/services/api";
 
 export default function SignupStep4() {
   const router = useRouter();
+  const params = useLocalSearchParams(); // <--- AQUI ESTÃO TODOS OS DADOS (Steps 1, 2, 3)
   
   // Estado do Assistente
   const [assistantName, setAssistantName] = useState("Eletron");
-  const [style, setStyle] = useState<"bottts" | "avataaars">("bottts"); // Robô ou Humano
-  const [seed, setSeed] = useState("Eletron"); // Semente para gerar imagem
-  const [personality, setPersonality] = useState("friendly"); // friendly | serious
+  const [style, setStyle] = useState<"bottts" | "avataaars">("bottts"); 
+  const [seed, setSeed] = useState("Eletron"); 
+  const [personality, setPersonality] = useState("friendly"); 
+  
+  // Estados de Loading
   const [loadingImg, setLoadingImg] = useState(false);
+  const [processing, setProcessing] = useState(false); // Loading do cadastro
 
   // URL Dinâmica
   const avatarUrl = `https://api.dicebear.com/9.x/${style}/png?seed=${seed}&size=200&backgroundColor=${style === 'bottts' ? 'transparent' : 'b6e3f4'}`;
 
-  const handleFinish = () => {
-    // Aqui salvaríamos as configs do assistente no backend
-    Alert.alert(
-      "Equipe Pronta! 🚀", 
-      `${assistantName} foi contratado(a) como seu gerente digital.`,
-      [
-        { 
-          text: "Entrar na Loja", 
-          onPress: () => router.replace("/(tabs)/home") 
-        }
-      ]
-    );
+  // --- FINALIZAR CADASTRO (ENVIAR PARA O BACKEND) ---
+  const handleFinish = async () => {
+    setProcessing(true);
+
+    try {
+        // 1. Monta o objeto final
+        const finalPayload = {
+            ...params, // phone, name, email, storeName, category, password
+            assistantName,
+            assistantStyle: style,
+            assistantPersonality: personality
+        };
+
+        // 2. Envia para o Backend
+        await api.post('/auth/register', finalPayload);
+
+        // 3. Sucesso!
+        Alert.alert(
+          "Equipe Pronta! 🚀", 
+          `${assistantName} foi contratado(a) como seu gerente digital.`,
+          [
+            { 
+              text: "Entrar na Loja", 
+              onPress: () => router.replace("/(tabs)/home/home") 
+            }
+          ]
+        );
+
+    } catch (error: any) {
+        const msg = error.response?.data?.message || "Erro ao criar conta. Tente novamente.";
+        Alert.alert("Ops!", msg);
+        console.log(error);
+    } finally {
+        setProcessing(false);
+    }
   };
 
-  const handleSkip = () => {
-    router.replace("/(tabs)/home");
+  const handleSkip = async () => {
+    // Se pular, usa os valores padrão que já estão no state
+    await handleFinish();
   };
 
   return (
@@ -62,7 +93,7 @@ export default function SignupStep4() {
               <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color={colors.text.main} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSkip}>
+              <TouchableOpacity onPress={handleSkip} disabled={processing}>
                 <Text style={{ fontFamily: "Poppins_600SemiBold", color: colors.text.light }}>Pular</Text>
               </TouchableOpacity>
             </View>
@@ -150,7 +181,7 @@ export default function SignupStep4() {
                 </View>
               </View>
 
-              {/* Personalidade (Futuro Prompt da IA) */}
+              {/* Personalidade */}
               <View>
                 <Text style={styles.label}>Personalidade</Text>
                 <View style={{ flexDirection: "row", gap: 12 }}>
@@ -183,9 +214,20 @@ export default function SignupStep4() {
 
           {/* FOOTER */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.button} activeOpacity={0.8} onPress={handleFinish}>
-              <Text style={styles.buttonText}>Concluir e Entrar</Text>
-              <Ionicons name="rocket-outline" size={20} color={colors.text.onPrimary} />
+            <TouchableOpacity 
+                style={[styles.button, { opacity: processing ? 0.7 : 1 }]} 
+                activeOpacity={0.8} 
+                onPress={handleFinish}
+                disabled={processing}
+            >
+              {processing ? (
+                  <ActivityIndicator color="#FFF" />
+              ) : (
+                  <>
+                    <Text style={styles.buttonText}>Concluir e Entrar</Text>
+                    <Ionicons name="rocket-outline" size={20} color={colors.text.onPrimary} />
+                  </>
+              )}
             </TouchableOpacity>
           </View>
 

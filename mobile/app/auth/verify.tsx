@@ -7,20 +7,24 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Keyboard
+  Keyboard,
+  ActivityIndicator,
+  Alert
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/constants/colors";
+import { api } from "../../src/services/api"; // Importar API
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams();
   const [code, setCode] = useState("");
   const [timer, setTimer] = useState(30);
+  const [verifying, setVerifying] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  // Timer regressivo
+  // Timer
   useEffect(() => {
     const interval = setInterval(() => {
       setTimer((prev) => (prev > 0 ? prev - 1 : 0));
@@ -28,13 +32,43 @@ export default function VerifyCodeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Simula validação do código
-  const handleVerify = () => {
-    if (code.length === 4) {
-      // Se validou, vai para o cadastro
-      router.push("/signup/step1");
-    } else {
-      alert("Código inválido (use 4 dígitos)");
+  // --- REENVIAR CÓDIGO ---
+  const handleResend = async () => {
+      try {
+          await api.post('/auth/send-otp', { phone });
+          setTimer(30);
+          Alert.alert("Enviado", "Novo código enviado para seu WhatsApp.");
+      } catch (error) {
+          Alert.alert("Erro", "Não foi possível reenviar.");
+      }
+  };
+
+  // --- VALIDAR CÓDIGO ---
+  const handleVerify = async () => {
+    if (code.length !== 4) return;
+
+    setVerifying(true);
+
+    try {
+        // Chama o Backend
+        await api.post('/auth/validate-otp', { 
+            phone, 
+            code 
+        });
+
+        // Se não deu erro, sucesso!
+        router.push({
+            pathname: "/signup/step1", // Rota de Cadastro de Dados
+            params: { phone }
+        });
+
+    } catch (error: any) {
+        // Se o backend retornou erro (ex: código errado)
+        const msg = error.response?.data?.message || "Código inválido.";
+        Alert.alert("Atenção", msg);
+        setCode(""); // Limpa para tentar de novo
+    } finally {
+        setVerifying(false);
     }
   };
 
@@ -45,7 +79,6 @@ export default function VerifyCodeScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={{ padding: 24, paddingTop: 60, flex: 1 }}>
           
-          {/* Header */}
           <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 32 }}>
             <Ionicons name="arrow-back" size={24} color={colors.text.main} />
           </TouchableOpacity>
@@ -58,7 +91,7 @@ export default function VerifyCodeScreen() {
             <Text style={{ fontFamily: "Poppins_600SemiBold", color: colors.text.main }}>{phone}</Text>
           </Text>
 
-          {/* Input Oculto mas Focável */}
+          {/* Input Oculto */}
           <TextInput
             ref={inputRef}
             value={code}
@@ -71,7 +104,7 @@ export default function VerifyCodeScreen() {
             autoFocus
           />
 
-          {/* Visual das Caixas */}
+          {/* Caixinhas do Código */}
           <TouchableOpacity 
             activeOpacity={1} 
             onPress={() => inputRef.current?.focus()}
@@ -81,14 +114,10 @@ export default function VerifyCodeScreen() {
               <View 
                 key={i}
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  borderWidth: 1,
+                  width: 64, height: 64, borderRadius: 16, borderWidth: 1,
                   borderColor: code[i] ? colors.primary : colors.border,
                   backgroundColor: code[i] ? "rgba(242, 201, 76, 0.1)" : colors.surface,
-                  justifyContent: "center",
-                  alignItems: "center",
+                  justifyContent: "center", alignItems: "center",
                 }}
               >
                 <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 28, color: colors.text.main }}>
@@ -102,28 +131,27 @@ export default function VerifyCodeScreen() {
           <TouchableOpacity 
             style={{
               backgroundColor: code.length === 4 ? colors.primary : "#E5E7EB",
-              height: 56,
-              borderRadius: 12,
-              justifyContent: "center",
-              alignItems: "center",
-              marginBottom: 24
+              height: 56, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 24
             }}
-            disabled={code.length !== 4}
+            disabled={code.length !== 4 || verifying}
             onPress={handleVerify}
           >
-            <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 16, color: code.length === 4 ? "#000" : "#999" }}>
-              Verificar Código
-            </Text>
+            {verifying ? (
+                <ActivityIndicator color="#000" />
+            ) : (
+                <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 16, color: code.length === 4 ? "#000" : "#999" }}>
+                Verificar Código
+                </Text>
+            )}
           </TouchableOpacity>
 
-          {/* Reenviar */}
           <View style={{ alignItems: "center" }}>
             {timer > 0 ? (
               <Text style={{ fontFamily: "Poppins_500Medium", color: colors.text.light }}>
                 Reenviar código em 00:{timer < 10 ? `0${timer}` : timer}
               </Text>
             ) : (
-              <TouchableOpacity onPress={() => setTimer(30)}>
+              <TouchableOpacity onPress={handleResend}>
                 <Text style={{ fontFamily: "Poppins_700Bold", color: colors.primary }}>
                   Reenviar código agora
                 </Text>

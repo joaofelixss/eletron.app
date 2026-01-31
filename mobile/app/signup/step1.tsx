@@ -10,13 +10,15 @@ import {
   TouchableWithoutFeedback,
   Keyboard
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./signup.styles";
 import { colors } from "../../src/constants/colors";
 
 export default function SignupStep1() {
   const router = useRouter();
+  const params = useLocalSearchParams(); // Recebe o { phone } da tela Verify
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
@@ -25,8 +27,16 @@ export default function SignupStep1() {
       alert("Preencha todos os campos");
       return;
     }
-    // Aqui você salvaria no estado global ou passaria via params
-    router.push("/signup/step2");
+
+    // Passa os dados acumulados para o próximo passo
+    router.push({
+        pathname: "/signup/step2",
+        params: { 
+            phone: params.phone, 
+            name, 
+            email 
+        }
+    });
   };
 
   return (

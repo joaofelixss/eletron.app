@@ -11,7 +11,8 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons"; 
@@ -19,6 +20,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./index.styles"; 
 import { colors } from "../src/constants/colors";
 import { maskPhone, unmask } from "../src/utils/masks"; 
+
+// IMPORTAR API
+import { api } from "../src/services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,38 +34,52 @@ export default function LoginScreen() {
     setPhone(maskPhone(text));
   };
 
-  async function handleLogin() {
+ async function handleLogin() {
     const rawPhone = unmask(phone);
     if (rawPhone.length < 11) {
-      alert("Por favor, digite um número de celular válido com DDD.");
+      Alert.alert("Erro", "Digite o número completo com DDD.");
       return;
     }
 
     setLoading(true);
-    setLoadingMessage("Verificando seu número...");
+    setLoadingMessage("Verificando...");
     
-    // Simula uma requisição à API
-    setTimeout(() => {
-      // LOGICA SIMULADA: Se o número terminar em '9', é usuário existente.
-      // Se não, é usuário novo.
-      if (rawPhone.endsWith("9")) {
-        setLoadingMessage("Conta encontrada!");
+    try {
+      // 1. Verifica se existe
+      const checkRes = await api.post('/auth/check-phone', { phone: rawPhone });
+      const { exists, name } = checkRes.data;
+
+      if (exists) {
+        // ... Lógica de login existente (Senha) ...
+        setLoadingMessage(`Olá, ${name.split(' ')[0]}!`);
         setTimeout(() => {
             setLoading(false);
-            router.push({ pathname: "/auth/welcome-back", params: { phone } });
+            router.push({ pathname: "/auth/welcome-back", params: { phone: rawPhone, name } });
         }, 800);
+
       } else {
-        setLoadingMessage("Quase lá...");
+        // 2. NOVO USUÁRIO: Envia Código OTP
+        setLoadingMessage("Enviando código SMS...");
+        await api.post('/auth/send-otp', { phone: rawPhone });
+
         setTimeout(() => {
             setLoading(false);
-            router.push({ pathname: "/auth/verify", params: { phone } });
+            // Vai para a tela de Verificar Código
+            router.push({ 
+                pathname: "/auth/verify", 
+                params: { phone: rawPhone } 
+            });
         }, 800);
       }
-    }, 1500); 
+
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("Erro", "Falha na conexão. Tente novamente.");
+    }
   }
 
   function handleGoogleLogin() {
-    alert("Funcionalidade em desenvolvimento.");
+    Alert.alert("Em Breve", "Login com Google estará disponível na próxima versão.");
   }
 
   return (
@@ -69,7 +87,7 @@ export default function LoginScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-        {/* MODAL DE LOADING "QUASE LÁ" */}
+        {/* MODAL DE LOADING */}
         <Modal transparent visible={loading} animationType="fade">
             <View style={{ 
                 flex: 1, 
@@ -89,11 +107,8 @@ export default function LoginScreen() {
                     elevation: 10
                 }}>
                     <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 16 }} />
-                    <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 18, color: colors.text.main, marginBottom: 4 }}>
+                    <Text style={{ fontFamily: "Poppins_700Bold", fontSize: 18, color: colors.text.main, marginBottom: 4, textAlign: 'center' }}>
                         {loadingMessage}
-                    </Text>
-                    <Text style={{ fontFamily: "Poppins_400Regular", fontSize: 12, color: colors.text.light }}>
-                        Aguarde um momento
                     </Text>
                 </View>
             </View>
@@ -109,18 +124,19 @@ export default function LoginScreen() {
               <Image 
                 source={require("../assets/images/logo.png")} 
                 style={styles.logo}
+                resizeMode="contain"
               />
               <View style={styles.textContainer}>
-                <Text style={styles.title}>Qual seu WhatsApp?</Text>
+                <Text style={styles.title}>Acesse sua Loja</Text>
                 <Text style={styles.subtitle}>
-                  Inicie seu cadastro ou acesse a sua conta para gerenciar sua loja.
+                  Digite seu WhatsApp para entrar ou criar uma nova conta.
                 </Text>
               </View>
             </View>
 
             <View style={styles.form}>
               <View>
-                <Text style={styles.label}>Celular</Text>
+                <Text style={styles.label}>WhatsApp</Text>
                 <View style={styles.phoneInputContainer}>
                   <View style={styles.countryCode}>
                     <Text style={styles.flag}>🇧🇷</Text>
@@ -143,7 +159,7 @@ export default function LoginScreen() {
                 activeOpacity={0.8}
                 onPress={handleLogin}
               >
-                 <Text style={styles.buttonText}>Começar</Text>
+                 <Text style={styles.buttonText}>Continuar</Text>
                  <Ionicons name="arrow-forward" size={20} color={colors.text.onPrimary} />
               </TouchableOpacity>
 

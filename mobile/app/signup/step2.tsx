@@ -10,23 +10,32 @@ import {
   TouchableWithoutFeedback,
   Keyboard
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./signup.styles";
 import { colors } from "../../src/constants/colors";
 
 export default function SignupStep2() {
   const router = useRouter();
+  const params = useLocalSearchParams(); // Recebe dados do Step 1
+
   const [storeName, setStoreName] = useState("");
   const [category, setCategory] = useState("");
 
   const handleNext = () => {
     if (!storeName.trim()) {
-      alert("Por favor, informe o nome da sua loja.");
+      alert("Informe o nome da loja.");
       return;
     }
-    // Avança para a senha
-    router.push("/signup/step3");
+    
+    router.push({
+        pathname: "/signup/step3",
+        params: { 
+            ...params, // Repassa tudo anterior
+            storeName,
+            category
+        }
+    });
   };
 
   return (

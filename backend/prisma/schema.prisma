@@ -13,9 +13,20 @@ datasource db {
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
+  phone     String   @unique
   name      String
-  password  String
+  password  String   // Em produção, lembre de usar Hash (bcrypt)
   role      Role     @default(OWNER)
+  
+  // --- NOVOS CAMPOS ---
+  storeName String?
+  category  String?
+  
+  // Configuração do Assistente (Nome, Estilo, Personalidade)
+  assistantName        String?
+  assistantStyle       String? // bottts ou avataaars
+  assistantPersonality String? // friendly ou serious
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -140,4 +151,13 @@ model MarketingContent {
   generatedText String
   platform      String
   createdAt     DateTime @default(now())
+}
+
+// Adicione no final do arquivo
+model VerificationCode {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  phone     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
