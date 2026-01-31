@@ -20,6 +20,7 @@ import { colors } from "../../src/constants/colors";
 
 // IMPORTAR API
 import { api } from "../../src/services/api";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function SignupStep4() {
   const router = useRouter();
@@ -38,6 +39,8 @@ export default function SignupStep4() {
   // URL Dinâmica
   const avatarUrl = `https://api.dicebear.com/9.x/${style}/png?seed=${seed}&size=200&backgroundColor=${style === 'bottts' ? 'transparent' : 'b6e3f4'}`;
 
+  const { signIn } = useAuth(); // Hook de Auth
+  
   // --- FINALIZAR CADASTRO (ENVIAR PARA O BACKEND) ---
   const handleFinish = async () => {
     setProcessing(true);

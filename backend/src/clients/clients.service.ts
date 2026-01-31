@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,41 +7,35 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ClientsService {
   constructor(private prisma: PrismaService) {}
 
-  create(createClientDto: CreateClientDto) {
+  // 1. Adicionado userId
+  create(createClientDto: CreateClientDto, userId: string) {
     return this.prisma.client.create({
-      data: createClientDto,
+      data: {
+        ...createClientDto,
+        userId: userId, // <--- VINCULA AO DONO
+      },
     });
   }
 
-  findAll() {
-    return this.prisma.client.findMany();
+  // 2. Filtra pelo userId
+  findAll(userId: string) {
+    return this.prisma.client.findMany({
+      where: { userId: userId },
+    });
   }
 
-  async findOne(id: string) {
-    if (!/^[0-9a-fA-F]{24}$/.test(id))
-      throw new NotFoundException('ID Inválido');
-
-    const client = await this.prisma.client.findUnique({ where: { id } });
-    if (!client) throw new NotFoundException('Cliente não encontrado');
-    return client;
+  findOne(id: string) {
+    return this.prisma.client.findUnique({ where: { id } });
   }
 
-  async update(id: string, updateClientDto: UpdateClientDto) {
-    if (!/^[0-9a-fA-F]{24}$/.test(id))
-      throw new NotFoundException('ID Inválido');
-
+  update(id: string, updateClientDto: UpdateClientDto) {
     return this.prisma.client.update({
       where: { id },
       data: updateClientDto,
     });
   }
 
-  async remove(id: string) {
-    if (!/^[0-9a-fA-F]{24}$/.test(id))
-      throw new NotFoundException('ID Inválido');
-
-    return this.prisma.client.delete({
-      where: { id },
-    });
+  remove(id: string) {
+    return this.prisma.client.delete({ where: { id } });
   }
 }

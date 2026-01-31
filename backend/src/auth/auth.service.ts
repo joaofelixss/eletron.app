@@ -7,8 +7,18 @@ export class AuthService {
 
   // 1. CHECAR TELEFONE
   async checkPhone(phone: string) {
-    const user = await this.prisma.user.findUnique({ where: { phone } });
-    return { exists: !!user, name: user?.name };
+    const cleanPhone = phone.replace(/\D/g, '');
+    const user = await this.prisma.user.findUnique({
+      where: { phone: cleanPhone },
+    });
+
+    if (user) {
+      // RETORNA O USUÁRIO COMPLETO (sem a senha)
+      const { password, ...result } = user;
+      return { exists: true, ...result };
+    } else {
+      return { exists: false };
+    }
   }
 
   // 2. ENVIAR CÓDIGO (OTP)

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query, // <--- Importante
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -16,30 +17,30 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+  create(@Body() body: any) {
+    // O Frontend manda { userId: "...", name: "...", ... }
+    const { userId, ...createProductDto } = body;
+    return this.productsService.create(createProductDto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.productsService.findAll();
+  findAll(@Query('userId') userId: string) {
+    // Retorna apenas produtos deste usuário
+    return this.productsService.findAll(userId);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    // REMOVI O '+' DAQUI
     return this.productsService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    // REMOVI O '+' DAQUI
     return this.productsService.update(id, updateProductDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    // REMOVI O '+' DAQUI
     return this.productsService.remove(id);
   }
 }

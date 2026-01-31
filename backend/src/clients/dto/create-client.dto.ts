@@ -5,4 +5,6 @@ export class CreateClientDto {
   cpf?: string;
   address?: string;
   notes?: string;
+
+  userId: string; // <--- Novo campo obrigatório (ID do Dono)
 }

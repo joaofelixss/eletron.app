@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query, // <--- Importante
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,13 +17,17 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  create(@Body() body: any) {
+    // O Frontend vai mandar { userId: "...", items: [...], total: 100 }
+    // O userId aqui atua como o sellerId
+    const { userId, ...createOrderDto } = body;
+    return this.ordersService.create(createOrderDto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  findAll(@Query('userId') userId: string) {
+    // Busca apenas as vendas deste usuário
+    return this.ordersService.findAll(userId);
   }
 
   @Get(':id')

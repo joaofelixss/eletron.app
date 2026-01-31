@@ -8,6 +8,7 @@ import {
   Poppins_700Bold 
 } from "@expo-google-fonts/poppins";
 import { View, ActivityIndicator } from "react-native";
+import { AuthProvider } from "../src/context/AuthContext";
 
 export default function RootLayout() {
   // Carrega as fontes na memória
@@ -28,6 +29,7 @@ export default function RootLayout() {
 
   return (
     <>
+    <AuthProvider>
       <StatusBar style="dark" backgroundColor={colors.background} />
       <Stack 
         screenOptions={{ 
@@ -39,6 +41,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="signup" /> {/* Pasta nova de cadastro */}
       </Stack>
+    </AuthProvider>
     </>
   );
 }

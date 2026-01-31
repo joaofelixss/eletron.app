@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,28 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- USUÁRIOS E AUTENTICAÇÃO ---
+// --- USUÁRIOS ---
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   phone     String   @unique
   name      String
-  password  String   // Em produção, lembre de usar Hash (bcrypt)
+  password  String   
   role      Role     @default(OWNER)
   
-  // --- NOVOS CAMPOS ---
   storeName String?
   category  String?
   
-  // Configuração do Assistente (Nome, Estilo, Personalidade)
   assistantName        String?
-  assistantStyle       String? // bottts ou avataaars
-  assistantPersonality String? // friendly ou serious
+  assistantStyle       String? 
+  assistantPersonality String? 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // RELACIONAMENTOS (O Dono de tudo)
   sales     Order[]
+  products  Product[] // <--- Cada user tem seus produtos
+  clients   Client[]  // <--- Cada user tem seus clientes
 }
 
 enum Role {
@@ -38,12 +37,12 @@ enum Role {
   SELLER
 }
 
-// --- PRODUTOS E ESTOQUE ---
+// --- PRODUTOS ---
 model Product {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  sku         String?  @unique
+  sku         String?  // Removi o @unique global, pois users diferentes podem ter sku igual
   imageUrl    String?
   
   costPrice   Float    @default(0) 
@@ -57,10 +56,14 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // VINCULO COM O DONO
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+
   orderItems  OrderItem[]
 }
 
-// --- CLIENTES (CRM) ---
+// --- CLIENTES ---
 model Client {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
@@ -73,13 +76,17 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // VINCULO COM O DONO
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+
   orders    Order[]
 }
 
-// --- VENDAS E PEDIDOS (PDV) ---
+// --- PEDIDOS ---
 model Order {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  code        Int         @default(0) // Ajuste temporário
+  code        Int         @default(0)
   status      OrderStatus @default(OPEN)
   total       Float       @default(0)
   discount    Float       @default(0)
@@ -91,9 +98,9 @@ model Order {
   clientId    String?     @db.ObjectId
   client      Client?     @relation(fields: [clientId], references: [id])
   
-  // Vendedor Opcional por enquanto (até termos Login)
-  sellerId    String?     @db.ObjectId
-  seller      User?       @relation(fields: [sellerId], references: [id])
+  // VENDEDOR AGORA É OBRIGATÓRIO (Para filtrar as vendas dele)
+  sellerId    String      @db.ObjectId
+  seller      User        @relation(fields: [sellerId], references: [id])
 
   items       OrderItem[]
   tradeIn     TradeIn?
@@ -116,12 +123,12 @@ enum PaymentType {
   SPLIT
 }
 
-// --- ITENS DO PEDIDO ---
+// --- ITENS ---
 model OrderItem {
   id        String  @id @default(auto()) @map("_id") @db.ObjectId
   quantity  Int
-  price     Float   // Preço unitário no momento da venda
-  name      String  // Nome do produto (para histórico)
+  price     Float   
+  name      String  
   
   orderId   String  @db.ObjectId
   order     Order   @relation(fields: [orderId], references: [id])
@@ -130,7 +137,6 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
 }
 
-// --- TRADE-IN ---
 model TradeIn {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   model         String
@@ -144,16 +150,6 @@ model TradeIn {
   createdAt     DateTime @default(now())
 }
 
-// --- MARKETING IA ---
-model MarketingContent {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  productName   String
-  generatedText String
-  platform      String
-  createdAt     DateTime @default(now())
-}
-
-// Adicione no final do arquivo
 model VerificationCode {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   phone     String   @unique

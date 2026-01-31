@@ -23,12 +23,14 @@ import { maskPhone, unmask } from "../src/utils/masks";
 
 // IMPORTAR API
 import { api } from "../src/services/api";
+import { useAuth } from "../src/context/AuthContext";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const { signIn } = useAuth(); // Hook de Auth
 
   const handlePhoneChange = (text: string) => {
     setPhone(maskPhone(text));
@@ -49,12 +51,24 @@ export default function LoginScreen() {
       const checkRes = await api.post('/auth/check-phone', { phone: rawPhone });
       const { exists, name } = checkRes.data;
 
-      if (exists) {
-        // ... Lógica de login existente (Senha) ...
+     if (exists) {
         setLoadingMessage(`Olá, ${name.split(' ')[0]}!`);
-        setTimeout(() => {
+        
+        // RECUPERA DADOS COMPLETOS DO USUÁRIO (O Backend deveria retornar o user completo aqui)
+        // Por enquanto, vamos simular que pegamos o ID. 
+        // *Importante: Atualize seu backend /check-phone para retornar o objeto user completo*
+        
+        const userData = {
+            id: response.data.id, // <--- O BACKEND PRECISA RETORNAR ISSO
+            name: response.data.name,
+            phone: rawPhone,
+            email: response.data.email,
+            storeName: response.data.storeName
+        };
+
+        setTimeout(async () => {
             setLoading(false);
-            router.push({ pathname: "/auth/welcome-back", params: { phone: rawPhone, name } });
+            await signIn(userData); // <--- LOGIN REAL E PERSISTENTE
         }, 800);
 
       } else {
